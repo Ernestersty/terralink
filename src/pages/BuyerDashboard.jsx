@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '/src/supabaseClient.js';
 import PaymentModal from '../components/PaymentModal.jsx';
+// FIXED EXPLICIT FILENAME CAPITALIZATION FOR YOUR HOOK
+import usePwaDownload from '/src/hooks/usePwaDownload.js';
 
 export default function BuyerDashboard() {
   // NAVIGATION SYSTEM
@@ -21,6 +23,9 @@ export default function BuyerDashboard() {
   // MOCK COUNTERS PRESERVING PREVIOUS SCREEN INSIGHTS
   const [savedCount, setSavedCount] = useState(2);
   const [inquiriesCount, setInquiriesCount] = useState(1);
+
+  // EXECUTE INITIALIZATION FROM THE CORRECTLY IMPORTED HOOK FILE
+  const { handleDownloadClick, isInstallable } = usePwaDownload();
 
   // Financial Analysis Matrix
   const marketTrends = [
@@ -127,23 +132,24 @@ export default function BuyerDashboard() {
       }
     };
 
+    // Make initializeGoogleMap available on window for the API script callback fallback
+    window.initializeGoogleMap = initializeGoogleMap;
+
     // Dynamically inject script tag if window.google doesn't exist yet
     if (!window.google || !window.google.maps) {
       let googleScript = document.getElementById('google-maps-inject');
       if (!googleScript) {
         googleScript = document.createElement('script');
         googleScript.id = 'google-maps-inject';
-        // Using standard script injection directly to bypass wrapper component bugs
-        googleScript.src = `https://maps.googleapis.com/maps/api/js?v=weekly`; 
+        googleScript.src = `https://maps.googleapis.com/maps/api/js?v=weekly&callback=initializeGoogleMap`; 
         googleScript.async = true;
         googleScript.defer = true;
-        googleScript.onload = () => initializeGoogleMap();
         document.body.appendChild(googleScript);
       } else {
         googleScript.addEventListener('load', initializeGoogleMap);
       }
     } else {
-      initializeGoogleMap();
+      setTimeout(initializeGoogleMap, 50);
     }
 
   }, [activeTab, properties, currency]);
@@ -164,7 +170,7 @@ export default function BuyerDashboard() {
     } catch (err) {
       console.error('Exception streaming marketplace array:', err.message);
     } finally {
-      setLoading(false);
+      loading && setLoading(false);
     }
   };
 
@@ -277,6 +283,33 @@ export default function BuyerDashboard() {
           color: var(--deep);
           background: linear-gradient(135deg, var(--gold-light), var(--gold));
           font-weight: 500;
+        }
+
+        .sidebar-download-btn {
+          margin-top: auto;
+          background: rgba(201, 168, 76, 0.08);
+          border: 1px dashed var(--gold);
+          color: var(--gold-light);
+          padding: 14px 20px;
+          border-radius: 12px;
+          text-align: center;
+          font-family: 'Jost', sans-serif;
+          font-size: 13px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          box-sizing: border-box;
+        }
+
+        .sidebar-download-btn:hover {
+          background: linear-gradient(135deg, var(--gold-light), var(--gold));
+          color: var(--deep);
+          border-style: solid;
         }
 
         .workspace-viewport {
@@ -463,7 +496,7 @@ export default function BuyerDashboard() {
         
         <aside className="dashboard-sidebar">
           <div className="sidebar-brand">Terralink</div>
-          <ul className="sidebar-nav-list">
+          <ul className="sidebar-nav-list" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <li>
               <button type="button" className={`sidebar-link-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
                 📊 Core Overview
@@ -482,6 +515,13 @@ export default function BuyerDashboard() {
             <li>
               <button type="button" className={`sidebar-link-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
                 ⚙️ Settings Panel
+              </button>
+            </li>
+
+            {/* SYNCED DOWNLOAD TRIGGER AREA */}
+            <li style={{ marginTop: 'auto' }}>
+              <button type="button" className="sidebar-download-btn" onClick={handleDownloadClick}>
+                📥 Download App
               </button>
             </li>
           </ul>
@@ -596,7 +636,6 @@ export default function BuyerDashboard() {
           onClose={() => setSelectedPropertyForPayment(null)}
           onSuccess={(transactionData) => {
             setSelectedPropertyForPayment(null);
-            // Optional: You can trigger an alert or stream updates here
           }}
         />
       )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '/src/supabaseClient.js';
+import { usePwaDownload } from '../hooks/usePwaDownload'; // Referencing the specific shared file here
 
 export default function SellerDashboard() {
   // NAVIGATION SYSTEM
@@ -27,9 +28,8 @@ export default function SellerDashboard() {
   const [viewsCount, setViewsCount] = useState(1420);
   const [leadsCount, setLeadsCount] = useState(12);
 
-  // PWA DOWNLOAD ENGINE STATE MANAGEMENT
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  // REFERENCING THE SHARED PWA DOWNLOADING HOOK HERE
+  const { showInstallBtn, handleDownloadClick } = usePwaDownload();
 
   // FINANCIAL HISTOGRAMS MATRIX
   const salesPerformanceData = [
@@ -38,32 +38,6 @@ export default function SellerDashboard() {
     { target: 'Q3 Escrow', closed: '310M' },
     { target: 'Q4 Projection', closed: '890M' },
   ];
-
-  // TRACK BROWSER PWA INSTALL BANNER EVENT
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallBtn(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleDownloadClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User successfully installed the PWA asset dashboard app');
-    }
-    setDeferredPrompt(null);
-    setShowInstallBtn(false);
-  };
 
   // NATIVE PRINT EXPORT IMPLEMENTATION
   const handlePrintReport = () => {
@@ -897,10 +871,10 @@ export default function SellerDashboard() {
 
               <hr style={{border: 'none', borderTop: '1px solid rgba(201,168,76,0.1)', margin: '24px 0'}} />
 
-              <h4 style={{fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#fff', marginBottom: '8px'}}>Wipe Authentication Objects</h4>
-              <p style={{fontSize: '13px', color: 'var(--muted)', marginBottom: '20px'}}>Safely terminate session objects.</p>
-              
-              <button type="button" className="btn-danger-action" onClick={handleSignOut}>🔒 Terminate Secure Session & Log Out</button>
+              <h4 style={{fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#fff', marginBottom: '16px'}}>Account Controls</h4>
+              <button type="button" className="btn-danger-action" onClick={handleSignOut}>
+                🚪 Terminate Identity Session (Logout)
+              </button>
             </div>
           )}
 
