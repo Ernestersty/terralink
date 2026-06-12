@@ -27,6 +27,10 @@ export default function SellerDashboard() {
   const [viewsCount, setViewsCount] = useState(1420);
   const [leadsCount, setLeadsCount] = useState(12);
 
+  // PWA DOWNLOAD ENGINE STATE MANAGEMENT
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
   // FINANCIAL HISTOGRAMS MATRIX
   const salesPerformanceData = [
     { target: 'Q1 Launch', closed: '120M' },
@@ -34,6 +38,32 @@ export default function SellerDashboard() {
     { target: 'Q3 Escrow', closed: '310M' },
     { target: 'Q4 Projection', closed: '890M' },
   ];
+
+  // TRACK BROWSER PWA INSTALL BANNER EVENT
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleDownloadClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User successfully installed the PWA asset dashboard app');
+    }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
 
   useEffect(() => {
     fetchSellerMarketplace();
@@ -44,50 +74,43 @@ export default function SellerDashboard() {
     if (activeTab !== 'dashboard') return;
 
     let googleMapInstance = null;
-    let activePlacementMarker = null; // Track user interactive placement marker session
+    let activePlacementMarker = null; 
 
     const initializeSellerMap = () => {
       const mapContainer = document.getElementById('seller-live-map');
       if (!mapContainer || !window.google || !window.google.maps) return;
 
-      // Mount full Google Map instance with interactive action buttons
       googleMapInstance = new window.google.maps.Map(mapContainer, {
         center: { lat: -6.7924, lng: 39.2083 }, 
         zoom: 6,
         mapTypeId: window.google.maps.MapTypeId.ROADMAP,
         disableDefaultUI: false, 
         zoomControl: true,
-        // ENFORCING PRECISE RIGHT CORNER FULLSCREEN LAYOUT TOGGLE BUTTON
         fullscreenControl: true, 
         fullscreenControlOptions: {
           position: window.google.maps.ControlPosition.TOP_RIGHT
         }
       });
 
-      // --- CRITICAL FIX: ATTACH MAP CLICK INTERACTION POINTER EVENT ---
       googleMapInstance.addListener('click', (event) => {
         const clickedLat = event.latLng.lat();
         const clickedLng = event.latLng.lng();
 
-        // Update the form state seamlessly
         setLatitude(clickedLat.toFixed(6));
         setLongitude(clickedLng.toFixed(6));
 
-        // If an entry placement pin already exists on screen, update its position. Otherwise, instantiate a new one.
         if (activePlacementMarker) {
           activePlacementMarker.setPosition(event.latLng);
         } else {
           activePlacementMarker = new window.google.maps.Marker({
             position: event.latLng,
             map: googleMapInstance,
-            icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png', // Differentiate listing selector pin
+            icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png', 
             title: 'Selected Listing Position'
           });
         }
       });
-      // --- END OF CRITICAL INTERACTION POINTER FIX ---
 
-      // Render pins directly from your dynamic Supabase collection array
       if (myProperties && myProperties.length > 0) {
         myProperties.forEach(item => {
           const latNum = Number(item.lat);
@@ -118,7 +141,6 @@ export default function SellerDashboard() {
       }
     };
 
-    // Lazy load the underlying engine script gracefully without layout disruption
     if (!window.google || !window.google.maps) {
       let googleScript = document.getElementById('google-maps-inject');
       if (!googleScript) {
@@ -138,7 +160,6 @@ export default function SellerDashboard() {
 
   }, [activeTab, myProperties, currency]);
 
-  // AUTOMATED QUICK CANVAS SELECTION MODIFIER (Dar, Arusha, Mbeya Coordinates Click Matrix)
   const handleRegionQuickSelect = (regionName, lat, lng) => {
     setSelectedRegion(regionName);
     setLatitude(lat);
@@ -146,7 +167,6 @@ export default function SellerDashboard() {
     setLocationName(regionName);
   };
 
-  // BACKEND METADATA CONTROL HOOK: SUPABASE DATABASE DISCOVERY STREAMS
   const fetchSellerMarketplace = async () => {
     try {
       setLoading(true);
@@ -166,7 +186,6 @@ export default function SellerDashboard() {
     }
   };
 
-  // ASSET REGISTRATION SUBMISSION FORM LOOPS
   const handleCreatePropertyAsset = async (e) => {
     e.preventDefault();
     if (!title || !price || !locationName) {
@@ -193,7 +212,6 @@ export default function SellerDashboard() {
 
       if (error) throw error;
 
-      // Flush Form parameters gracefully
       setTitle('');
       setPrice('');
       setLocationName('');
@@ -222,7 +240,6 @@ export default function SellerDashboard() {
 
   return (
     <>
-      {/* FULL PREMIUM STYLING SYSTEM MATRIX */}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Jost:wght@200;300;400;500;600&display=swap');
 
@@ -349,8 +366,17 @@ export default function SellerDashboard() {
           width: calc(100% - 280px);
         }
 
-        .workspace-header-hero {
+        .workspace-header-hero-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
           margin-bottom: 44px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+
+        .workspace-header-hero {
+          margin: 0;
         }
 
         .workspace-header-hero p {
@@ -359,6 +385,7 @@ export default function SellerDashboard() {
           color: var(--gold);
           text-transform: uppercase;
           margin-bottom: 8px;
+          margin-top: 0;
         }
 
         .workspace-header-hero h1 {
@@ -367,6 +394,31 @@ export default function SellerDashboard() {
           font-weight: 300;
           color: #fff;
           margin: 0;
+        }
+
+        .btn-luxury-pwa-download {
+          background: transparent;
+          border: 1px solid var(--gold);
+          color: var(--gold-light);
+          padding: 12px 24px;
+          border-radius: 12px;
+          font-family: 'Jost', sans-serif;
+          font-size: 12px;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          cursor: pointer;
+          transition: all 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .btn-luxury-pwa-download:hover {
+          background: linear-gradient(135deg, var(--gold-light), var(--gold));
+          color: var(--deep);
+          box-shadow: 0 6px 20px rgba(201,168,76,0.2);
+          transform: translateY(-1px);
         }
 
         .metrics-panel-row {
@@ -605,6 +657,7 @@ export default function SellerDashboard() {
           .dashboard-container-root { flex-direction: column; }
           .dashboard-sidebar { width: 100%; min-width: 100%; }
           .workspace-viewport { width: 100%; padding: 30px 20px; }
+          .workspace-header-hero-container { gap: 12px; }
         }
       `}} />
 
@@ -657,9 +710,22 @@ export default function SellerDashboard() {
         {/* MAIN WORKSPACE ENGINE VIEWPORT */}
         <main className="workspace-viewport">
           
-          <div className="workspace-header-hero">
-            <p>System Management Console</p>
-            <h1>Sovereign Seller Account</h1>
+          {/* HEADER HERO ROW WITH CONDITIONAL PWA DOWNLOAD BUTTON IN TOP RIGHT */}
+          <div className="workspace-header-hero-container">
+            <div className="workspace-header-hero">
+              <p>System Management Console</p>
+              <h1>Sovereign Seller Account</h1>
+            </div>
+            
+            {showInstallBtn && (
+              <button 
+                type="button"
+                className="btn-luxury-pwa-download"
+                onClick={handleDownloadClick}
+              >
+                📥 Download App
+              </button>
+            )}
           </div>
 
           {/* TAB OPTION 1: CORE REAL TIME METRICS & FULL GEOMAP OVERVIEW */}
