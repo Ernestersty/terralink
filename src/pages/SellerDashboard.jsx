@@ -65,6 +65,11 @@ export default function SellerDashboard() {
     setShowInstallBtn(false);
   };
 
+  // NATIVE PRINT EXPORT IMPLEMENTATION
+  const handlePrintReport = () => {
+    window.print();
+  };
+
   useEffect(() => {
     fetchSellerMarketplace();
   }, []);
@@ -396,7 +401,13 @@ export default function SellerDashboard() {
           margin: 0;
         }
 
-        .btn-luxury-pwa-download {
+        .header-action-control-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .btn-luxury-pwa-download, .btn-luxury-report-print {
           background: transparent;
           border: 1px solid var(--gold);
           color: var(--gold-light);
@@ -414,7 +425,7 @@ export default function SellerDashboard() {
           gap: 8px;
         }
 
-        .btn-luxury-pwa-download:hover {
+        .btn-luxury-pwa-download:hover, .btn-luxury-report-print:hover {
           background: linear-gradient(135deg, var(--gold-light), var(--gold));
           color: var(--deep);
           box-shadow: 0 6px 20px rgba(201,168,76,0.2);
@@ -710,22 +721,32 @@ export default function SellerDashboard() {
         {/* MAIN WORKSPACE ENGINE VIEWPORT */}
         <main className="workspace-viewport">
           
-          {/* HEADER HERO ROW WITH CONDITIONAL PWA DOWNLOAD BUTTON IN TOP RIGHT */}
+          {/* HEADER HERO ROW WITH ACTIONS IN TOP RIGHT */}
           <div className="workspace-header-hero-container">
             <div className="workspace-header-hero">
               <p>System Management Console</p>
               <h1>Sovereign Seller Account</h1>
             </div>
             
-            {showInstallBtn && (
+            <div className="header-action-control-row">
               <button 
                 type="button"
-                className="btn-luxury-pwa-download"
-                onClick={handleDownloadClick}
+                className="btn-luxury-report-print"
+                onClick={handlePrintReport}
               >
-                📥 Download App
+                🖨️ Print Report
               </button>
-            )}
+
+              {showInstallBtn && (
+                <button 
+                  type="button"
+                  className="btn-luxury-pwa-download"
+                  onClick={handleDownloadClick}
+                >
+                  📥 Download App
+                </button>
+              )}
+            </div>
           </div>
 
           {/* TAB OPTION 1: CORE REAL TIME METRICS & FULL GEOMAP OVERVIEW */}
