@@ -8,8 +8,8 @@ export default function BuyerDashboard() {
   // NAVIGATION SYSTEM
   const [activeTab, setActiveTab] = useState('dashboard'); 
 
-  // CONTROL SETTINGS CORES
-  const [theme, setTheme] = useState('midnight');
+  // CONTROL SETTINGS CORES - Updated to fit the smartcity configuration environment
+  const [theme, setTheme] = useState('smartcity');
   const [currency, setCurrency] = useState('TZS');
 
   // MARKET DISCOVERY DATA STREAMS
@@ -89,10 +89,10 @@ export default function BuyerDashboard() {
 
             const infoWindow = new window.google.maps.InfoWindow({
               content: `
-                <div style="color:#111; padding:6px; font-family:'Jost',sans-serif; min-width:150px;">
+                <div style="color:#111; padding:6px; font-family:'Inter',sans-serif; min-width:150px;">
                   <strong style="display:block; margin-bottom:2px;">${item.title || 'Sovereign Asset'}</strong>
                   <span style="display:block; font-size:12px; color:#555; margin-bottom:4px;">📍 ${item.location || 'Verified Site'}</span>
-                  <span style="color:#C9A84C; font-weight:600;">${currency} ${Number(item.price || 0).toLocaleString()}</span>
+                  <span style="color:#00C2CB; font-weight:600;">${currency} ${Number(item.price || 0).toLocaleString()}</span>
                 </div>
               `
             });
@@ -119,7 +119,7 @@ export default function BuyerDashboard() {
 
           const infoWindow = new window.google.maps.InfoWindow({
             content: `
-              <div style="color:#111; padding:4px; font-family:'Jost',sans-serif;">
+              <div style="color:#111; padding:4px; font-family:'Inter',sans-serif;">
                 <strong>${loc.name}</strong>
               </div>
             `
@@ -187,19 +187,20 @@ export default function BuyerDashboard() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Jost:wght@200;300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Inter:wght@200;300;400;500;600;700&display=swap');
 
         :root {
-          --gold: #C9A84C;
-          --gold-light: #E8C87A;
-          --gold-pale: #F5E8C0;
-          --border: rgba(201,168,76,0.25);
-          --text: #E8DFC8;
-          --muted: #8A99B8;
+          --teal: #00C2CB;
+          --teal-light: #33d1d8;
+          --teal-pale: #b3f2f5;
+          --border: rgba(0, 194, 203, 0.2);
+          --text: #E5E7EB;
+          --muted: #9CA3AF;
           
-          --deep: ${theme === 'midnight' ? '#0A0F1E' : '#040406'};
-          --card: ${theme === 'midnight' ? '#131C30' : '#0E0E12'};
-          --card2: ${theme === 'midnight' ? '#192340' : '#14141A'};
+          --deep: #0F172A;
+          --card: #1E293B;
+          --card2: #334155;
+          --navy: #1A2238;
         }
 
         html, body {
@@ -213,7 +214,7 @@ export default function BuyerDashboard() {
         .dashboard-container-root {
           background: var(--deep);
           color: var(--text);
-          font-family: 'Jost', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-weight: 300;
           min-height: 100vh;
           display: flex;
@@ -226,7 +227,7 @@ export default function BuyerDashboard() {
           width: 280px;
           min-width: 280px;
           border-right: 1px solid var(--border);
-          background: linear-gradient(180deg, rgba(19,28,48,0.85) 0%, rgba(10,15,30,0.95) 100%);
+          background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
           backdrop-filter: blur(20px);
           padding: 44px 24px;
           display: flex;
@@ -237,11 +238,11 @@ export default function BuyerDashboard() {
         }
 
         .sidebar-brand {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 26px;
           font-weight: 700;
-          letter-spacing: 0.15em;
-          background: linear-gradient(135deg, var(--gold-light), var(--gold), #A07830);
+          letter-spacing: 0.12em;
+          background: linear-gradient(135deg, var(--teal-light), var(--teal), #008B94);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -267,7 +268,7 @@ export default function BuyerDashboard() {
           padding: 14px 20px;
           border-radius: 12px;
           text-align: left;
-          font-family: 'Jost', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 13px;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -280,20 +281,20 @@ export default function BuyerDashboard() {
         }
 
         .sidebar-link-btn.active {
-          color: var(--deep);
-          background: linear-gradient(135deg, var(--gold-light), var(--gold));
-          font-weight: 500;
+          color: #0f172a;
+          background: linear-gradient(135deg, var(--teal-light), var(--teal));
+          font-weight: 600;
         }
 
         .sidebar-download-btn {
           margin-top: auto;
-          background: rgba(201, 168, 76, 0.08);
-          border: 1px dashed var(--gold);
-          color: var(--gold-light);
+          background: rgba(0, 194, 203, 0.08);
+          border: 1px dashed var(--teal);
+          color: var(--teal-light);
           padding: 14px 20px;
           border-radius: 12px;
           text-align: center;
-          font-family: 'Jost', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 13px;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -307,8 +308,8 @@ export default function BuyerDashboard() {
         }
 
         .sidebar-download-btn:hover {
-          background: linear-gradient(135deg, var(--gold-light), var(--gold));
-          color: var(--deep);
+          background: linear-gradient(135deg, var(--teal-light), var(--teal));
+          color: #0f172a;
           border-style: solid;
         }
 
@@ -326,9 +327,9 @@ export default function BuyerDashboard() {
         }
 
         .workspace-header-hero h1 {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 46px;
-          font-weight: 300;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 40px;
+          font-weight: 400;
           color: #fff;
           margin: 0;
         }
@@ -350,9 +351,9 @@ export default function BuyerDashboard() {
         }
 
         .metric-data-val {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 36px;
-          color: var(--gold-light);
+          font-family: 'Montserrat', sans-serif;
+          font-size: 34px;
+          color: var(--teal-light);
           font-weight: 600;
         }
 
@@ -371,18 +372,18 @@ export default function BuyerDashboard() {
         }
 
         .luxury-card-panel {
-          background: linear-gradient(145deg, var(--card), #101828);
+          background: linear-gradient(145deg, var(--card), var(--navy));
           border: 1px solid var(--border);
           border-radius: 22px;
           padding: 40px;
-          box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+          box-shadow: 0 16px 64px rgba(0,0,0,0.4);
           box-sizing: border-box;
           width: 100%;
         }
 
         .panel-headline-text {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 24px;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 22px;
           color: #fff;
           margin-top: 0;
           margin-bottom: 8px;
@@ -401,8 +402,8 @@ export default function BuyerDashboard() {
           border: 1px solid var(--border);
           border-radius: 16px;
           overflow: hidden;
-          background: #222;
-          box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+          background: #1e293b;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
         .trend-chart-list {
@@ -419,12 +420,12 @@ export default function BuyerDashboard() {
           padding: 12px 14px;
           background: rgba(255,255,255,0.02);
           border-radius: 8px;
-          border-left: 3px solid var(--gold);
+          border-left: 3px solid var(--teal);
         }
 
         .premium-property-row {
-          background: rgba(25,35,64,0.3);
-          border: 1px solid rgba(201,168,76,0.1);
+          background: rgba(51, 65, 85, 0.3);
+          border: 1px solid rgba(0, 194, 203, 0.15);
           border-radius: 16px;
           padding: 24px;
           display: flex;
@@ -436,19 +437,19 @@ export default function BuyerDashboard() {
         }
 
         .property-financial-value {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 24px;
-          font-weight: 700;
-          color: var(--gold-light);
+          font-family: 'Montserrat', sans-serif;
+          font-size: 22px;
+          font-weight: 600;
+          color: var(--teal-light);
         }
 
         .btn-luxury-checkout {
-          background: linear-gradient(135deg, var(--gold-light), var(--gold));
+          background: linear-gradient(135deg, var(--teal-light), var(--teal));
           border: none;
           border-radius: 10px;
           padding: 12px 24px;
-          color: var(--deep);
-          font-family: 'Jost', sans-serif;
+          color: #0f172a;
+          font-family: 'Inter', sans-serif;
           font-weight: 600;
           font-size: 13px;
           text-transform: uppercase;
@@ -472,7 +473,7 @@ export default function BuyerDashboard() {
 
         .theme-selection-row {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
           gap: 16px;
           margin-bottom: 32px;
         }
@@ -487,8 +488,8 @@ export default function BuyerDashboard() {
         }
 
         .theme-card-node.active {
-          border-color: var(--gold);
-          background: rgba(201,168,76,0.08);
+          border-color: var(--teal);
+          background: rgba(0, 194, 203, 0.08);
         }
       `}} />
 
@@ -529,7 +530,7 @@ export default function BuyerDashboard() {
 
         <main className="workspace-viewport">
           <div className="workspace-header-hero">
-            <h1>Sovereign Buyer Account</h1>
+            <h1>Smart Buyer Account</h1>
           </div>
 
           {activeTab === 'dashboard' && (
@@ -566,7 +567,7 @@ export default function BuyerDashboard() {
                     {marketTrends.map((trend, i) => (
                       <div key={i} className="trend-node">
                         <span>{trend.month}</span>
-                        <span style={{fontFamily: 'Cormorant Garamond, serif', color: 'var(--gold-light)'}}>{trend.value}</span>
+                        <span style={{fontFamily: 'Montserrat, sans-serif', color: 'var(--teal-light)'}}>{trend.value}</span>
                       </div>
                     ))}
                   </div>
@@ -583,8 +584,8 @@ export default function BuyerDashboard() {
                   {properties.map((item) => (
                     <div key={item.id} className="premium-property-row">
                       <div>
-                        <h4>{item.title}</h4>
-                        <p>📍 {item.location}</p>
+                        <h4 style={{margin: '0 0 4px 0', fontFamily: 'Montserrat, sans-serif'}}>{item.title}</h4>
+                        <p style={{margin: 0, color: 'var(--muted)'}}>📍 {item.location}</p>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                         <div className="property-financial-value">
@@ -609,7 +610,7 @@ export default function BuyerDashboard() {
             <div className="luxury-card-panel">
               <h3 className="panel-headline-text">Active Inquiries</h3>
               <div className="premium-property-row">
-                <div><h4>Villa Reserve, Dodoma Zone</h4></div>
+                <div><h4 style={{margin: 0, fontFamily: 'Montserrat, sans-serif'}}>Villa Reserve, Dodoma Zone</h4></div>
                 <div className="property-financial-value">TZS 400,000,000</div>
               </div>
             </div>
@@ -619,8 +620,7 @@ export default function BuyerDashboard() {
             <div className="luxury-card-panel">
               <h3 className="panel-headline-text">Console Preferences</h3>
               <div className="theme-selection-row">
-                <div className={`theme-card-node ${theme === 'midnight' ? 'active' : ''}`} onClick={() => setTheme('midnight')}>Midnight Sapphire</div>
-                <div className={`theme-card-node ${theme === 'imperial' ? 'active' : ''}`} onClick={() => setTheme('imperial')}>Imperial Onyx</div>
+                <div className="theme-card-node active">Smart City Future</div>
               </div>
               <button type="button" className="btn-danger-action" onClick={handleSignOut}>🔒 Log Out</button>
             </div>
