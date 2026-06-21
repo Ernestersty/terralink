@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '/src/supabaseClient.js';
 import PaymentModal from '../components/PaymentModal.jsx';
 // FIXED EXPLICIT FILENAME CAPITALIZATION FOR YOUR HOOK
-import usePwaDownload from '/src/hooks/usePwaDownload.js';
+import {usePwaDownload} from '/src/hooks/usePwaDownload.js';
 
 export default function BuyerDashboard() {
   // NAVIGATION SYSTEM
