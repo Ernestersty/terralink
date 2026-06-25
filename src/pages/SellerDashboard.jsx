@@ -19,6 +19,14 @@ export default function SellerDashboard() {
   const [description, setDescription] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('Dar es Salaam');
 
+  // NEW: Media and Contact State Tracking variables
+  const [photoFile, setPhotoFile] = useState(null);
+  const [sellerPhone, setSellerPhone] = useState('');
+  const [sellerEmail, setSellerEmail] = useState('');
+
+  // International Region Filters for Global Scale
+  const [activeMarketGroup, setActiveMarketGroup] = useState('Domestic');
+
   // DATA MANAGEMENT STREAM ARRAYS
   const [myProperties, setMyProperties] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +47,40 @@ export default function SellerDashboard() {
     { target: 'Q4 Projection', closed: '890M' },
   ];
 
-  // NATIVE PRINT EXPORT IMPLEMENTATION
+  // GLOBAL REGIONAL COORDINATE MAP MATRIX
+  const globalCitiesMatrix = {
+    Domestic: [
+      { name: 'Dar es Salaam', label: '🏙️ Dar Zone', lat: '-6.7924', lng: '39.2083' },
+      { name: 'Arusha', label: '🌋 Arusha', lat: '-3.3869', lng: '36.6830' },
+      { name: 'Mbeya', label: '⛰️ Mbeya', lat: '-8.9004', lng: '33.4862' },
+      { name: 'Dodoma', label: '🏛️ Dodoma', lat: '-6.1630', lng: '35.7516' },
+      { name: 'Zanzibar', label: '🏖️ Zanzibar', lat: '-6.1659', lng: '39.1923' },
+    ],
+    Africa: [
+      { name: 'Nairobi', label: '🇰🇪 Nairobi', lat: '-1.2921', lng: '36.8219' },
+      { name: 'Johannesburg', label: '🇿🇦 Joburg', lat: '-26.2041', lng: '28.0473' },
+      { name: 'Cairo', label: '🇪🇬 Cairo', lat: '30.0444', lng: '31.2357' },
+      { name: 'Lagos', label: '🇳🇬 Lagos', lat: '6.5244', lng: '3.3792' },
+    ],
+    Americas: [
+      { name: 'New York', label: '🇺🇸 New York', lat: '40.7128', lng: '-74.0060' },
+      { name: 'Los Angeles', label: '🇺🇸 Los Angeles', lat: '34.0522', lng: '-118.2437' },
+      { name: 'Toronto', label: '🇨🇦 Toronto', lat: '43.6532', lng: '-79.3832' },
+      { name: 'São Paulo', label: '🇧🇷 São Paulo', lat: '-23.5505', lng: '-46.6333' },
+    ],
+    Europe: [
+      { name: 'London', label: '🇬🇧 London', lat: '51.5074', lng: '-0.1278' },
+      { name: 'Paris', label: '🇫🇷 Paris', lat: '48.8566', lng: '2.3522' },
+      { name: 'Frankfurt', label: '🇩🇪 Frankfurt', lat: '50.1109', lng: '8.6821' },
+    ],
+    AsiaEMEA: [
+      { name: 'Dubai', label: '🇦🇪 Dubai', lat: '25.2048', lng: '55.2708' },
+      { name: 'Tokyo', label: '🇯🇵 Tokyo', lat: '35.6762', lng: '139.6503' },
+      { name: 'Singapore', label: '🇸🇬 Singapore', lat: '1.3521', lng: '103.8198' },
+      { name: 'Mumbai', label: '🇮🇳 Mumbai', lat: '19.0760', lng: '72.8777' },
+    ]
+  };
+
   const handlePrintReport = () => {
     window.print();
   };
@@ -48,7 +89,6 @@ export default function SellerDashboard() {
     fetchSellerMarketplace();
   }, []);
 
-  // NATIVE GOOGLE MAPS RENDERING ENGINE INTEGRATION
   useEffect(() => {
     if (activeTab !== 'dashboard') return;
 
@@ -59,9 +99,20 @@ export default function SellerDashboard() {
       const mapContainer = document.getElementById('seller-live-map');
       if (!mapContainer || !window.google || !window.google.maps) return;
 
+      let initialLat = -6.7924;
+      let initialLng = 39.2083;
+
+      Object.keys(globalCitiesMatrix).forEach(group => {
+        const match = globalCitiesMatrix[group].find(c => c.name === selectedRegion);
+        if (match) {
+          initialLat = parseFloat(match.lat);
+          initialLng = parseFloat(match.lng);
+        }
+      });
+
       googleMapInstance = new window.google.maps.Map(mapContainer, {
-        center: { lat: -6.7924, lng: 39.2083 }, 
-        zoom: 6,
+        center: { lat: initialLat, lng: initialLng }, 
+        zoom: selectedRegion === 'Dar es Salaam' || selectedRegion === 'Arusha' || selectedRegion === 'Mbeya' ? 6 : 10,
         mapTypeId: window.google.maps.MapTypeId.ROADMAP,
         disableDefaultUI: false, 
         zoomControl: true,
@@ -125,7 +176,8 @@ export default function SellerDashboard() {
       if (!googleScript) {
         googleScript = document.createElement('script');
         googleScript.id = 'google-maps-inject';
-        googleScript.src = `https://maps.googleapis.com/maps/api/js?v=weekly`;
+        const apiKey = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY || '';
+        googleScript.src = `https://maps.googleapis.com/maps/api/js?v=weekly${apiKey ? `&key=${apiKey}` : ''}`;
         googleScript.async = true;
         googleScript.defer = true;
         googleScript.onload = () => initializeSellerMap();
@@ -137,7 +189,7 @@ export default function SellerDashboard() {
       initializeSellerMap();
     }
 
-  }, [activeTab, myProperties, currency]);
+  }, [activeTab, myProperties, currency, selectedRegion]);
 
   const handleRegionQuickSelect = (regionName, lat, lng) => {
     setSelectedRegion(regionName);
@@ -165,6 +217,7 @@ export default function SellerDashboard() {
     }
   };
 
+  // Process and upload file stream to Supabase Storage Bucket safely
   const handleCreatePropertyAsset = async (e) => {
     e.preventDefault();
     if (!title || !price || !locationName) {
@@ -174,7 +227,29 @@ export default function SellerDashboard() {
 
     try {
       setUploading(true);
+      let uploadedPhotoUrl = null;
 
+      // 1. Process bucket file upload stream if file data object exists
+      if (photoFile) {
+        const fileExtension = photoFile.name.split('.').pop();
+        const generatedFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+        const targetFilePath = `${generatedFileName}`;
+
+        const { error: storageError } = await supabase.storage
+          .from('property-photos')
+          .upload(targetFilePath, photoFile);
+
+        if (storageError) throw storageError;
+
+        // Extracting Public URL String Node
+        const { data: publicUrlData } = supabase.storage
+          .from('property-photos')
+          .getPublicUrl(targetFilePath);
+
+        uploadedPhotoUrl = publicUrlData?.publicUrl || null;
+      }
+
+      // 2. Transmit fully integrated record matrix block payload to remote relational tables
       const payload = {
         title,
         price: parseFloat(price),
@@ -182,6 +257,9 @@ export default function SellerDashboard() {
         lat: latitude ? parseFloat(latitude) : null,
         lng: longitude ? parseFloat(longitude) : null,
         description,
+        image_url: uploadedPhotoUrl,
+        seller_phone: sellerPhone || null,
+        seller_email: sellerEmail || null,
         created_at: new Date().toISOString()
       };
 
@@ -191,12 +269,20 @@ export default function SellerDashboard() {
 
       if (error) throw error;
 
+      // Flush state trees cleanly upon success execution
       setTitle('');
       setPrice('');
       setLocationName('');
       setLatitude('');
       setLongitude('');
       setDescription('');
+      setPhotoFile(null);
+      setSellerPhone('');
+      setSellerEmail('');
+      
+      // Clear file inputs cleanly inside DOM trees
+      const targetInput = document.getElementById('luxury-photo-uploader-element');
+      if (targetInput) targetInput.value = '';
       
       alert('Success: Premium asset logged into global tracking manifest database records.');
       fetchSellerMarketplace();
@@ -478,6 +564,34 @@ export default function SellerDashboard() {
           margin-bottom: 32px;
         }
 
+        .market-group-nav-container {
+          display: flex;
+          gap: 8px;
+          border-bottom: 1px solid var(--border);
+          padding-bottom: 12px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+        }
+
+        .market-group-btn {
+          background: transparent;
+          border: none;
+          color: var(--muted);
+          font-family: 'Jost', sans-serif;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          cursor: pointer;
+          padding: 6px 12px;
+          transition: all 0.2s;
+        }
+
+        .market-group-btn.active {
+          color: var(--gold-light);
+          border-bottom: 2px solid var(--gold);
+          font-weight: 500;
+        }
+
         .region-tab-row-container {
           display: flex;
           gap: 12px;
@@ -543,6 +657,29 @@ export default function SellerDashboard() {
         .luxury-field-input:focus, .luxury-textarea-input:focus {
           outline: none;
           border-color: var(--gold-light);
+        }
+
+        /* NEW: Custom File Upload Wrapper styles */
+        .luxury-file-input-wrapper {
+          position: relative;
+          border: 1px dashed var(--gold);
+          border-radius: 12px;
+          padding: 24px;
+          text-align: center;
+          background: rgba(201,168,76,0.02);
+          transition: all 0.3s;
+        }
+        .luxury-file-input-wrapper:hover {
+          background: rgba(201,168,76,0.05);
+          border-color: var(--gold-light);
+        }
+        .luxury-file-input-hidden {
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          cursor: pointer;
+          width: 100%;
+          height: 100%;
         }
 
         .dual-form-row-matrix {
@@ -750,11 +887,32 @@ export default function SellerDashboard() {
                     <h3 className="panel-headline-text">Geospatial Listing Map Portfolio</h3>
                     <div className="panel-sub-text">Monitor your active real estate coordinates on the live interactive grid tracker.</div>
                     
+                    {/* Global Continent Filter Navigation Strip */}
+                    <div className="market-group-nav-container">
+                      {Object.keys(globalCitiesMatrix).map((group) => (
+                        <button
+                          key={group}
+                          type="button"
+                          className={`market-group-btn ${activeMarketGroup === group ? 'active' : ''}`}
+                          onClick={() => setActiveMarketGroup(group)}
+                        >
+                          {group}
+                        </button>
+                      ))}
+                    </div>
+
                     {/* QUICK SELECT NAVIGATION PILLS CONTROLS */}
                     <div className="region-tab-row-container">
-                      <button type="button" className={`region-pill-action ${selectedRegion === 'Dar es Salaam' ? 'active' : ''}`} onClick={() => handleRegionQuickSelect('Dar es Salaam', '-6.7924', '39.2083')}>🏙️ Dar Zone</button>
-                      <button type="button" className={`region-pill-action ${selectedRegion === 'Arusha' ? 'active' : ''}`} onClick={() => handleRegionQuickSelect('Arusha', '-3.3869', '36.6830')}>🌋 Arusha</button>
-                      <button type="button" className={`region-pill-action ${selectedRegion === 'Mbeya' ? 'active' : ''}`} onClick={() => handleRegionQuickSelect('Mbeya', '-8.9004', '33.4862')}>⛰️ Mbeya</button>
+                      {globalCitiesMatrix[activeMarketGroup].map((city) => (
+                        <button 
+                          key={city.name}
+                          type="button" 
+                          className={`region-pill-action ${selectedRegion === city.name ? 'active' : ''}`} 
+                          onClick={() => handleRegionQuickSelect(city.name, city.lat, city.lng)}
+                        >
+                          {city.label}
+                        </button>
+                      ))}
                     </div>
 
                     {/* TRUE GOOGLE MAP INSTANCE FRAME */}
@@ -788,9 +946,39 @@ export default function SellerDashboard() {
               <div className="panel-sub-text">Inject new property coordinate profiles directly into the network tracking matrices.</div>
               
               <form onSubmit={handleCreatePropertyAsset} className="form-scaffold-stack">
+                
+                {/* NEW FEATURE: Real Estate Architectural Image Stream Upload Node */}
+                <div className="input-composite-cluster">
+                  <label>Property Visual Showcase Media (Image Upload)</label>
+                  <div className="luxury-file-input-wrapper">
+                    <span style={{fontSize: '14px', color: photoFile ? 'var(--gold-light)' : 'var(--muted)'}}>
+                      {photoFile ? `📸 Selected: ${photoFile.name}` : '✨ Drop architectural files here or tap to explore files'}
+                    </span>
+                    <input 
+                      id="luxury-photo-uploader-element"
+                      type="file" 
+                      accept="image/*"
+                      className="luxury-file-input-hidden"
+                      onChange={(e) => setPhotoFile(e.target.files[0] || null)}
+                    />
+                  </div>
+                </div>
+
                 <div className="input-composite-cluster">
                   <label>Property Architectural Designation Name</label>
                   <input type="text" className="luxury-field-input" placeholder="e.g., The Grand Oasis Villa Complex" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+
+                {/* NEW FEATURE: Integrated Broker & Seller Direct Contact Matrix Layer */}
+                <div className="dual-form-row-matrix">
+                  <div className="input-composite-cluster">
+                    <label>Direct Telephone Hot-line Connection</label>
+                    <input type="tel" className="luxury-field-input" placeholder="e.g., +255 712 345 678" value={sellerPhone} onChange={(e) => setSellerPhone(e.target.value)} />
+                  </div>
+                  <div className="input-composite-cluster">
+                    <label>Official Concierge Email Account</label>
+                    <input type="email" className="luxury-field-input" placeholder="e.g., concierge@luxuryvillas.com" value={sellerEmail} onChange={(e) => setSellerEmail(e.target.value)} />
+                  </div>
                 </div>
 
                 <div className="dual-form-row-matrix">
@@ -821,7 +1009,7 @@ export default function SellerDashboard() {
                 </div>
 
                 <button type="submit" className="btn-luxury-submit" disabled={uploading}>
-                  {uploading ? 'Synching Matrix Node...' : '⚡ Publish Asset Configuration'}
+                  {uploading ? 'Synching Media & Matrix Nodes...' : '⚡ Publish Asset Configuration'}
                 </button>
               </form>
             </div>
@@ -841,9 +1029,23 @@ export default function SellerDashboard() {
                 <div>
                   {myProperties.map((item) => (
                     <div key={item.id} className="premium-property-row">
-                      <div>
-                        <h4 style={{fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#fff', margin: '0 0 4px 0'}}>{item.title}</h4>
-                        <p style={{margin: '0', fontSize: '13px', color: 'var(--muted)'}}>📍 {item.location} {item.lat && `(${item.lat}, ${item.lng})`}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {item.image_url && (
+                          <img 
+                            src={item.image_url} 
+                            alt={item.title} 
+                            style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--gold)' }} 
+                          />
+                        )}
+                        <div>
+                          <h4 style={{fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#fff', margin: '0 0 4px 0'}}>{item.title}</h4>
+                          <p style={{margin: '0 0 4px 0', fontSize: '13px', color: 'var(--muted)'}}>📍 {item.location} {item.lat && `(${item.lat}, ${item.lng})`}</p>
+                          {(item.seller_phone || item.seller_email) && (
+                            <p style={{margin: '0', fontSize: '11px', color: 'var(--gold-light)'}}>
+                              {item.seller_phone && `📞 ${item.seller_phone}`} {item.seller_email && ` ✉️ ${item.seller_email}`}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="property-financial-value">
                         {currency} {Number(item.price || 0).toLocaleString()}
