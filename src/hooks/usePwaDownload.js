@@ -2,44 +2,61 @@ import { useState, useEffect } from 'react';
 
 export function usePwaDownload() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
+      // Stash the event for later use
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
-      setShowInstallBtn(true);
+      // Update UI to show install button
+      setIsInstallable(true);
+    };
+
+    const handleAppInstalled = () => {
+      // Hide the install button after successful installation
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+      console.log('PWA was successfully installed');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstallable(false);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleDownloadClick = async () => {
-    if (!deferredPrompt) return;
-    
-    // Show the browser install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    } else {
-      console.log('User dismissed the install prompt');
+    if (!deferredPrompt) {
+      alert('App is ready to download! Check your browser menu for "Install" or "Add to Home Screen"');
+      return;
     }
-    
-    // Clear the deferred prompt variable; it can only be used once
-    setDeferredPrompt(null);
-    setShowInstallBtn(false);
+
+    try {
+      // Show the install prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      // Clear the saved prompt since it can't be used again
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } catch (err) {
+      console.error('Error handling PWA install:', err);
+    }
   };
 
-  return { showInstallBtn, handleDownloadClick };
+  return {
+    handleDownloadClick,
+    isInstallable
+  };
 }
