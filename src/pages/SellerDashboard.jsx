@@ -8,7 +8,15 @@ export default function SellerDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentSellerId, setCurrentSellerId] = useState(null);
-  const { handleDownloadClick, isInstallable } = usePwaDownload();
+  const [showCreateProperty, setShowCreateProperty] = useState(false);
+  const [newProperty, setNewProperty] = useState({
+    title: '',
+    location: '',
+    price: '',
+    description: '',
+    image: null
+  });
+  const { handleDownloadClick } = usePwaDownload();
 
   useEffect(() => {
     fetchSellerData();
@@ -22,7 +30,6 @@ export default function SellerDashboard() {
       if (user) {
         setCurrentSellerId(user.id);
         
-        // Fetch seller's properties
         const { data: propsData, error: propsError } = await supabase
           .from('properties')
           .select('*')
@@ -32,7 +39,6 @@ export default function SellerDashboard() {
         if (propsError) throw propsError;
         setProperties(propsData || []);
 
-        // Fetch seller's transactions
         const { data: txnData, error: txnError } = await supabase
           .from('transactions')
           .select('*')
@@ -46,6 +52,68 @@ export default function SellerDashboard() {
       console.error('Error fetching seller data:', err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('property_images')
+        .upload(`${currentSellerId}/${fileName}`, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('property_images')
+        .getPublicUrl(`${currentSellerId}/${fileName}`);
+      
+      return publicUrl;
+    } catch (err) {
+      console.error('Error uploading image:', err.message);
+      alert('Error uploading image: ' + err.message);
+      return null;
+    }
+  };
+
+  const handleCreateProperty = async (e) => {
+    e.preventDefault();
+    try {
+      if (!newProperty.title || !newProperty.location || !newProperty.price) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      let imageUrl = null;
+      if (newProperty.image) {
+        imageUrl = await handleImageUpload(newProperty.image);
+      }
+
+      const { data, error } = await supabase
+        .from('properties')
+        .insert([
+          {
+            title: newProperty.title,
+            location: newProperty.location,
+            price: parseFloat(newProperty.price),
+            description: newProperty.description,
+            image_url: imageUrl,
+            user_id: currentSellerId,
+            lat: -6.7924,
+            lng: 39.2083
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+      
+      alert('Property listed successfully!');
+      setNewProperty({ title: '', location: '', price: '', description: '', image: null });
+      setShowCreateProperty(false);
+      fetchSellerData();
+    } catch (err) {
+      console.error('Error creating property:', err.message);
+      alert('Error: ' + err.message);
     }
   };
 
@@ -94,7 +162,6 @@ export default function SellerDashboard() {
       }} />
 
       <div className="seller-dashboard">
-        {/* HEADER */}
         <div style={{
           backgroundColor: 'rgba(30, 41, 59, 0.8)',
           borderBottom: '1px solid rgba(0, 194, 203, 0.2)',
@@ -106,40 +173,40 @@ export default function SellerDashboard() {
           <div>
             <h1 style={{ margin: 0, fontSize: '28px', fontFamily: "'Montserrat', sans-serif" }}>🏢 Seller Dashboard</h1>
           </div>
-          <button
-            onClick={handleDownloadClick}
-            style={{
-              backgroundColor: 'rgba(0, 194, 203, 0.1)',
-              border: '1px dashed var(--teal)',
-              color: 'var(--teal-light)',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              marginRight: '16px',
-              fontSize: '13px',
-              fontWeight: '600',
-            }}
-          >
-            📥 Download App
-          </button>
-          <button
-            onClick={handleSignOut}
-            style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.5)',
-              color: '#ef4444',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '600',
-            }}
-          >
-            🔒 Log Out
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={handleDownloadClick}
+              style={{
+                backgroundColor: 'rgba(0, 194, 203, 0.1)',
+                border: '1px dashed var(--teal)',
+                color: 'var(--teal-light)',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+              }}
+            >
+              📥 Download App
+            </button>
+            <button
+              onClick={handleSignOut}
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                color: '#ef4444',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+              }}
+            >
+              🔒 Log Out
+            </button>
+          </div>
         </div>
 
-        {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(0, 194, 203, 0.1)', backgroundColor: 'var(--deep)' }}>
           {['dashboard', 'properties', 'transactions'].map(tab => (
             <button
@@ -166,7 +233,6 @@ export default function SellerDashboard() {
           ))}
         </div>
 
-        {/* CONTENT */}
         <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
           {activeTab === 'dashboard' && (
             <div>
@@ -199,44 +265,182 @@ export default function SellerDashboard() {
                   <div style={{ fontSize: '28px', fontWeight: '600', color: '#f59e0b', fontFamily: "'Montserrat', sans-serif" }}>{pendingPayments}</div>
                 </div>
               </div>
-              <div style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.6)',
-                border: '1px solid rgba(0, 194, 203, 0.2)',
-                borderRadius: '14px',
-                padding: '24px',
-              }}>
-                <h3 style={{ margin: '0 0 16px 0', fontFamily: "'Montserrat', sans-serif" }}>Welcome to Your Seller Account</h3>
-                <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}
-                >Manage your property listings, track earnings, and monitor transaction status all in one place. Your properties appear in the buyer marketplace and payments are securely held in escrow until property transfer is complete.</p>
-              </div>
             </div>
           )}
 
           {activeTab === 'properties' && (
             <div>
-              <h3 style={{ marginTop: 0, fontFamily: "'Montserrat', sans-serif" }}>Your Listed Properties</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <h3 style={{ marginTop: 0, fontFamily: "'Montserrat', sans-serif" }}>Your Listed Properties</h3>
+                <button
+                  onClick={() => setShowCreateProperty(!showCreateProperty)}
+                  style={{
+                    backgroundColor: 'var(--teal)',
+                    color: 'var(--deep)',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                  }}
+                >
+                  {showCreateProperty ? '✕ Cancel' : '+ Add New Property'}
+                </button>
+              </div>
+
+              {showCreateProperty && (
+                <form onSubmit={handleCreateProperty} style={{
+                  backgroundColor: 'rgba(51, 65, 85, 0.3)',
+                  border: '1px solid rgba(0, 194, 203, 0.2)',
+                  borderRadius: '14px',
+                  padding: '24px',
+                  marginBottom: '32px',
+                }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Property Title</label>
+                    <input
+                      type="text"
+                      value={newProperty.title}
+                      onChange={(e) => setNewProperty({...newProperty, title: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 194, 203, 0.2)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        color: 'var(--text)',
+                        boxSizing: 'border-box',
+                      }}
+                      placeholder="e.g., Luxury Villa in Masaki"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Location</label>
+                    <input
+                      type="text"
+                      value={newProperty.location}
+                      onChange={(e) => setNewProperty({...newProperty, location: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 194, 203, 0.2)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        color: 'var(--text)',
+                        boxSizing: 'border-box',
+                      }}
+                      placeholder="e.g., Dar es Salaam"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Price (TZS)</label>
+                    <input
+                      type="number"
+                      value={newProperty.price}
+                      onChange={(e) => setNewProperty({...newProperty, price: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 194, 203, 0.2)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        color: 'var(--text)',
+                        boxSizing: 'border-box',
+                      }}
+                      placeholder="500000000"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Description</label>
+                    <textarea
+                      value={newProperty.description}
+                      onChange={(e) => setNewProperty({...newProperty, description: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 194, 203, 0.2)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        color: 'var(--text)',
+                        boxSizing: 'border-box',
+                        minHeight: '100px',
+                        fontFamily: 'inherit',
+                      }}
+                      placeholder="Describe your property..."
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Property Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setNewProperty({...newProperty, image: e.target.files?.[0]})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 194, 203, 0.2)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        color: 'var(--text)',
+                        boxSizing: 'border-box',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--teal)',
+                      color: 'var(--deep)',
+                      border: 'none',
+                      padding: '14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '16px',
+                    }}
+                  >
+                    🚀 List Property
+                  </button>
+                </form>
+              )}
+
               {loading ? (
                 <p>Loading properties...</p>
               ) : properties.length === 0 ? (
                 <p style={{ color: 'var(--muted)' }}>No properties listed yet. Create your first listing!</p>
               ) : (
-                <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                   {properties.map(prop => (
                     <div key={prop.id} style={{
                       backgroundColor: 'rgba(51, 65, 85, 0.3)',
                       border: '1px solid rgba(0, 194, 203, 0.15)',
                       borderRadius: '12px',
-                      padding: '16px',
-                      marginBottom: '12px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
+                      overflow: 'hidden',
                     }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 4px 0' }}>{prop.title}</h4>
-                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)' }}>📍 {prop.location}</p>
+                      {prop.image_url && (
+                        <img
+                          src={prop.image_url}
+                          alt={prop.title}
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      )}
+                      <div style={{ padding: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0' }}>{prop.title}</h4>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: 'var(--muted)' }}>📍 {prop.location}</p>
+                        <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--teal-light)' }}>TZS {Number(prop.price || 0).toLocaleString()}</div>
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--teal-light)' }}>TZS {Number(prop.price || 0).toLocaleString()}</div>
                     </div>
                   ))}
                 </div>

@@ -5,13 +5,11 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
   const [loading, setLoading] = useState(false);
   const currency = 'TZS';
 
-  // Strict local calculation mapping to the database logic
   const totalAmount = parseFloat(property?.price || 0);
   const platformCommission = totalAmount * 0.02;
   const sellerPayout = totalAmount * 0.98;
 
   const handleInitiatePayment = async () => {
-    // Edge case safety check
     if (!property || !buyerId) {
       alert('Error: Missing structural session configuration or property variables.');
       return;
@@ -19,11 +17,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
 
     try {
       setLoading(true);
-
-      // Generate a mock reference token for the payment gateway handshake
       const trackingReference = `TL-${Math.floor(100000 + Math.random() * 900000)}`;
-
-      // NOTE: Verify if your properties table uses property.seller_id or property.user_id
       const sellerIdentifier = property.seller_id || property.user_id;
 
       if (!sellerIdentifier) {
@@ -31,11 +25,11 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
       }
 
       const payload = {
-        property_id: Number(property.id),  // Explicitly casting to Number to match your BIGINT constraint fixed earlier
-        buyer_id: buyerId,                  // Authenticated Buyer UUID
-        seller_id: sellerIdentifier,        // Resolved Seller UUID
-        amount_total: totalAmount,          // Raw entry price (trigger handles 2% and 98% split automatically)
-        status: 'pending',                  
+        property_id: Number(property.id),
+        buyer_id: buyerId,
+        seller_id: sellerIdentifier,
+        amount_total: totalAmount,
+        status: 'pending',
         payment_reference: trackingReference
       };
 
@@ -50,7 +44,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
       alert(`Transaction Initiated Successfully!\nReference: ${trackingReference}\n\nRedirecting to secure gateway checkout...`);
       
       if (onSuccess) onSuccess(data);
-      
+      if (onClose) onClose();
     } catch (err) {
       alert(`Payment Processing System Error: ${err.message}`);
     } finally {
@@ -62,54 +56,50 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
     <div style={styles.overlay}>
       <div style={styles.modalCard}>
         <div style={styles.headerRow}>
-          <h3 style={styles.title}>Secure Real Estate Escrow</h3>
+          <h3 style={styles.title}>💰 Secure Offer</h3>
           <button type="button" onClick={() => onClose && onClose()} style={styles.closeBtn}>✕</button>
         </div>
 
-        <p style={styles.subtitle}>Review transaction terms and platform distribution cuts before moving to the financial network pipelines.</p>
+        <p style={styles.subtitle}>Review transaction terms and confirm your secure offer before moving to payment.</p>
 
-        {/* PROPERTY RECAP */}
         <div style={styles.summaryBox}>
-          <div style={styles.summaryLabel}>Property Listing</div>
-          <div style={styles.summaryValue}>{property?.title || 'Premium Asset Asset'}</div>
-          <div style={styles.summarySub}>📍 {property?.location || 'Unknown Coordinates'}</div>
+          <div style={styles.summaryLabel}>Property</div>
+          <div style={styles.summaryValue}>{property?.title || 'Premium Asset'}</div>
+          <div style={styles.summarySub}>📍 {property?.location || 'Unknown Location'}</div>
         </div>
 
-        {/* MATH CALCULATION SPLIT LEDGER */}
         <div style={styles.ledgerContainer}>
           <div style={styles.ledgerRow}>
-            <span>Asset Valuation Total</span>
+            <span>Offer Amount</span>
             <span style={styles.boldText}>{currency} {totalAmount.toLocaleString()}</span>
           </div>
           
           <div style={styles.ledgerRow}>
-            <span style={styles.goldText}>Platform Commission Fee (2%)</span>
+            <span style={styles.goldText}>Platform Security Fee (2%)</span>
             <span style={styles.goldText}>+ {currency} {platformCommission.toLocaleString()}</span>
           </div>
 
           <hr style={styles.divider} />
 
           <div style={styles.ledgerRow}>
-            <span style={styles.mutedText}>Net Remittance to Seller (98%)</span>
+            <span style={styles.mutedText}>Seller Receives (98%)</span>
             <span style={styles.mutedText}>{currency} {sellerPayout.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* ACTION BUTTON */}
         <button 
           type="button"
           onClick={handleInitiatePayment} 
           disabled={loading} 
           style={styles.payBtn}
         >
-          {loading ? 'Processing Ledger Hold...' : `🔒 Authorize Checkout ${currency} ${totalAmount.toLocaleString()}`}
+          {loading ? 'Processing...' : `✓ Confirm Secure Offer - ${currency} ${totalAmount.toLocaleString()}`}
         </button>
       </div>
     </div>
   );
 }
 
-// PREMIUM STYLES MATRIX (Preserving theme and structure perfectly)
 const styles = {
   overlay: {
     position: 'fixed',
