@@ -137,7 +137,7 @@ export default function SellerDashboard() {
           title: newProperty.title,
           location: newProperty.location,
           price: parseFloat(newProperty.price),
-          description: newProperty.description,
+          description: newProperty.description || '',
           image_url: imageUrl,
           user_id: currentSellerId,
           lat: newProperty.lat,
@@ -174,33 +174,37 @@ export default function SellerDashboard() {
     <>
       <style dangerouslySetInnerHTML={{
         __html: `
-          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Inter:wght@200;300;400;500;600;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Jost:wght@300;400;500;600&display=swap');
           :root {
-            --teal: #00C2CB;
-            --teal-light: #33d1d8;
-            --deep: #0F172A;
-            --card: #1E293B;
-            --text: #E5E7EB;
-            --muted: #9CA3AF;
+            --gold: #C9A84C;
+            --gold-light: #E8C87A;
+            --gold-pale: #F5E8C0;
+            --deep: #0A0F1E;
+            --navy: #111827;
+            --card: #131C30;
+            --card2: #192340;
+            --border: rgba(201,168,76,0.22);
+            --text: #E8DFC8;
+            --muted: #8A99B8;
           }
-          html, body { margin: 0; padding: 0; background: var(--deep); color: var(--text); font-family: 'Inter', sans-serif; }
+          html, body { margin: 0; padding: 0; background: var(--deep); color: var(--text); font-family: 'Jost', sans-serif; }
           .seller-dashboard { min-height: 100vh; display: flex; flex-direction: column; }
         `
       }} />
 
       <div className="seller-dashboard">
         <div style={{
-          backgroundColor: 'rgba(30, 41, 59, 0.8)',
-          borderBottom: '1px solid rgba(0, 194, 203, 0.2)',
+          backgroundColor: 'rgba(19, 28, 48, 0.9)',
+          borderBottom: '1px solid var(--border)',
           padding: '24px 40px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <h1 style={{ margin: 0, fontSize: '28px', fontFamily: "'Montserrat', sans-serif" }}>🏢 Seller Dashboard</h1>
+          <h1 style={{ margin: 0, fontSize: '28px', fontFamily: "'Cormorant Garamond', serif", letterSpacing: '0.1em', color: 'var(--gold-light)' }}>🏢 SELLER DASHBOARD</h1>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button onClick={handleDownloadClick} style={{
-              backgroundColor: 'rgba(0, 194, 203, 0.1)', border: '1px dashed var(--teal)', color: 'var(--teal-light)',
+              backgroundColor: 'rgba(201, 168, 76, 0.1)', border: '1px dashed var(--gold)', color: 'var(--gold-light)',
               padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600',
             }}>📥 Download App</button>
             <button onClick={handleSignOut} style={{
@@ -210,15 +214,15 @@ export default function SellerDashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(0, 194, 203, 0.1)', backgroundColor: 'var(--deep)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--deep)' }}>
           {['dashboard', 'properties', 'transactions'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               flex: 1, padding: '16px', border: 'none',
-              backgroundColor: activeTab === tab ? 'rgba(0, 194, 203, 0.15)' : 'transparent',
-              color: activeTab === tab ? 'var(--teal)' : 'var(--muted)',
+              backgroundColor: activeTab === tab ? 'rgba(201, 168, 76, 0.15)' : 'transparent',
+              color: activeTab === tab ? 'var(--gold)' : 'var(--muted)',
               cursor: 'pointer', fontSize: '14px', fontWeight: activeTab === tab ? '600' : '400',
               textTransform: 'uppercase', letterSpacing: '0.05em',
-              borderBottom: activeTab === tab ? '2px solid var(--teal)' : 'none',
+              borderBottom: activeTab === tab ? '2px solid var(--gold)' : 'none',
             }}>
               {tab === 'dashboard' && '📊 Overview'}
               {tab === 'properties' && '🗺️ My Properties'}
@@ -230,17 +234,17 @@ export default function SellerDashboard() {
         <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
           {activeTab === 'dashboard' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-              <div style={{ backgroundColor: 'rgba(30, 41, 59, 0.6)', border: '1px solid rgba(0, 194, 203, 0.2)', borderRadius: '14px', padding: '24px' }}>
+              <div style={{ backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Total Earnings</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--teal-light)', fontFamily: "'Montserrat', sans-serif" }}>TZS {totalEarnings.toLocaleString()}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--gold-light)', fontFamily: "'Cormorant Garamond', serif" }}>TZS {totalEarnings.toLocaleString()}</div>
               </div>
-              <div style={{ backgroundColor: 'rgba(30, 41, 59, 0.6)', border: '1px solid rgba(0, 194, 203, 0.2)', borderRadius: '14px', padding: '24px' }}>
+              <div style={{ backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Active Listings</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--teal-light)', fontFamily: "'Montserrat', sans-serif" }}>{properties.length}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--gold-light)', fontFamily: "'Cormorant Garamond', serif" }}>{properties.length}</div>
               </div>
-              <div style={{ backgroundColor: 'rgba(30, 41, 59, 0.6)', border: '1px solid rgba(0, 194, 203, 0.2)', borderRadius: '14px', padding: '24px' }}>
+              <div style={{ backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Pending Payments</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: '#f59e0b', fontFamily: "'Montserrat', sans-serif" }}>{pendingPayments}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--gold)', fontFamily: "'Cormorant Garamond', serif" }}>{pendingPayments}</div>
               </div>
             </div>
           )}
@@ -248,68 +252,70 @@ export default function SellerDashboard() {
           {activeTab === 'properties' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <h3 style={{ marginTop: 0, fontFamily: "'Montserrat', sans-serif" }}>Your Listed Properties</h3>
+                <h3 style={{ marginTop: 0, fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', color: 'var(--gold-light)' }}>Your Listed Properties</h3>
                 <button onClick={() => setShowCreateProperty(!showCreateProperty)} style={{
-                  backgroundColor: 'var(--teal)', color: 'var(--deep)', border: 'none', padding: '12px 24px',
+                  backgroundColor: 'var(--gold)', color: 'var(--deep)', border: 'none', padding: '12px 24px',
                   borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-                }}>{showCreateProperty ? '✕ Cancel' : '+ Add New Property'}</button>
+                }}>
+                  {showCreateProperty ? '✕ Cancel' : '+ Add New Property'}
+                </button>
               </div>
 
               {showCreateProperty && (
                 <form onSubmit={handleCreateProperty} style={{
-                  backgroundColor: 'rgba(51, 65, 85, 0.3)', border: '1px solid rgba(0, 194, 203, 0.2)',
+                  backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)',
                   borderRadius: '14px', padding: '24px', marginBottom: '32px',
                 }}>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Property Title</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>Property Title</label>
                     <input type="text" value={newProperty.title} onChange={(e) => setNewProperty({...newProperty, title: e.target.value})} style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(10, 15, 30, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
                     }} placeholder="e.g., Luxury Villa in Masaki" />
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Location Name</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>Location Name</label>
                     <input type="text" value={newProperty.location} onChange={(e) => setNewProperty({...newProperty, location: e.target.value})} style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(10, 15, 30, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
                     }} placeholder="e.g., Dar es Salaam" />
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Price (TZS)</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>Price (TZS)</label>
                     <input type="number" value={newProperty.price} onChange={(e) => setNewProperty({...newProperty, price: e.target.value})} style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(10, 15, 30, 0.6)', color: 'var(--text)', boxSizing: 'border-box',
                     }} placeholder="500000000" />
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Description</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>Description</label>
                     <textarea value={newProperty.description} onChange={(e) => setNewProperty({...newProperty, description: e.target.value})} style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)', color: 'var(--text)', boxSizing: 'border-box', minHeight: '100px', fontFamily: 'inherit',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(10, 15, 30, 0.6)', color: 'var(--text)', boxSizing: 'border-box', minHeight: '100px', fontFamily: 'inherit',
                     }} placeholder="Describe your property..." />
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Property Image</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>Property Image</label>
                     <input type="file" accept="image/*" onChange={(e) => setNewProperty({...newProperty, image: e.target.files?.[0]})} style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)', color: 'var(--text)', boxSizing: 'border-box', cursor: 'pointer',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(10, 15, 30, 0.6)', color: 'var(--text)', boxSizing: 'border-box', cursor: 'pointer',
                     }} />
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>🗺️ Set Location on Map (Click to place marker)</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--gold)' }}>🗺️ Set Location on Map (Click to place marker)</label>
                     <div id="property-location-map" style={{
-                      width: '100%', height: '400px', borderRadius: '8px', border: '1px solid rgba(0, 194, 203, 0.2)', marginBottom: '12px',
+                      width: '100%', height: '400px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '12px',
                     }} />
                     {newProperty.lat && newProperty.lng && (
                       <div style={{
-                        backgroundColor: 'rgba(0, 194, 203, 0.1)', padding: '12px', borderRadius: '8px',
-                        border: '1px solid rgba(0, 194, 203, 0.3)', fontSize: '13px',
+                        backgroundColor: 'rgba(201, 168, 76, 0.1)', padding: '12px', borderRadius: '8px',
+                        border: '1px solid var(--border)', fontSize: '13px', color: 'var(--gold-light)'
                       }}>✓ Location fixed: <strong>Lat: {newProperty.lat.toFixed(4)}, Lng: {newProperty.lng.toFixed(4)}</strong></div>
                     )}
                   </div>
                   <button type="submit" style={{
-                    width: '100%', backgroundColor: 'var(--teal)', color: 'var(--deep)', border: 'none', padding: '14px',
-                    borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '16px',
+                    width: '100%', backgroundColor: 'var(--gold)', color: 'var(--deep)', border: 'none', padding: '14px',
+                    borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '16px', fontFamily: 'inherit'
                   }}>🚀 List Property</button>
                 </form>
               )}
@@ -320,15 +326,20 @@ export default function SellerDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                   {properties.map(prop => (
                     <div key={prop.id} style={{
-                      backgroundColor: 'rgba(51, 65, 85, 0.3)', border: '1px solid rgba(0, 194, 203, 0.15)',
+                      backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)',
                       borderRadius: '12px', overflow: 'hidden',
                     }}>
                       {prop.image_url && <img src={prop.image_url} alt={prop.title} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />}
                       <div style={{ padding: '16px' }}>
-                        <h4 style={{ margin: '0 0 8px 0' }}>{prop.title}</h4>
+                        <h4 style={{ margin: '0 0 8px 0', color: 'var(--gold-light)' }}>{prop.title}</h4>
                         <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: 'var(--muted)' }}>📍 {prop.location}</p>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--teal-light)' }}>📌 Lat: {prop.lat?.toFixed(4)}, Lng: {prop.lng?.toFixed(4)}</p>
-                        <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--teal-light)' }}>TZS {Number(prop.price || 0).toLocaleString()}</div>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--gold)' }}>📌 Lat: {prop.lat?.toFixed(4)}, Lng: {prop.lng?.toFixed(4)}</p>
+                        <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--gold-light)' }}>TZS {Number(prop.price || 0).toLocaleString()}</div>
+                        {prop.description && (
+                          <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--text)', fontStyle: 'italic' }}>
+                            {prop.description.length > 50 ? prop.description.substring(0, 50) + '...' : prop.description}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -339,23 +350,23 @@ export default function SellerDashboard() {
 
           {activeTab === 'transactions' && (
             <div>
-              <h3 style={{ marginTop: 0, fontFamily: "'Montserrat', sans-serif" }}>Recent Transactions</h3>
+              <h3 style={{ marginTop: 0, fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', color: 'var(--gold-light)' }}>Recent Transactions</h3>
               {loading ? <p>Loading...</p> : transactions.length === 0 ? (
                 <p style={{ color: 'var(--muted)' }}>No transactions yet.</p>
               ) : (
                 <div>
                   {transactions.map(txn => (
                     <div key={txn.id} style={{
-                      backgroundColor: 'rgba(51, 65, 85, 0.3)', border: '1px solid rgba(0, 194, 203, 0.15)',
+                      backgroundColor: 'linear-gradient(145deg, rgba(19, 28, 48, 0.6), rgba(25, 35, 64, 0.5))', border: '1px solid var(--border)',
                       borderRadius: '12px', padding: '16px', marginBottom: '12px',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     }}>
                       <div>
-                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>Ref: {txn.payment_reference}</div>
+                        <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--gold-light)' }}>Ref: {txn.payment_reference}</div>
                         <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{new Date(txn.created_at).toLocaleDateString()}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--teal-light)', marginBottom: '4px' }}>TZS {Number(txn.amount_total * 0.98).toLocaleString()}</div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--gold-light)', marginBottom: '4px' }}>TZS {Number(txn.amount_total * 0.98).toLocaleString()}</div>
                         <div style={{ fontSize: '12px', color: txn.status === 'completed' ? '#10b981' : '#f59e0b', fontWeight: '600', textTransform: 'capitalize' }}>{txn.status}</div>
                       </div>
                     </div>
