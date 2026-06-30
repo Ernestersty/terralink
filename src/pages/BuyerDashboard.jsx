@@ -112,6 +112,13 @@ export default function BuyerDashboard() {
     }
   };
 
+  const navItems = [
+    { tab: 'dashboard', icon: '📊', label: 'Overview' },
+    { tab: 'listings',  icon: '🏘️', label: 'Browse' },
+    { tab: 'map',       icon: '🗺️', label: 'Map' },
+    { tab: 'settings',  icon: '⚙️', label: 'Settings' },
+  ];
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -128,64 +135,189 @@ export default function BuyerDashboard() {
         }
         html, body { margin: 0; padding: 0; overflow-x: hidden; background: var(--deep); width: 100%; }
         .dashboard-container-root { background: var(--deep); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; width: 100%; box-sizing: border-box; }
-        .dashboard-sidebar { width: 280px; min-width: 280px; border-right: 1px solid var(--border); background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); padding: 44px 24px; display: flex; flex-direction: column; box-sizing: border-box; }
-        .sidebar-brand { font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.12em; background: linear-gradient(135deg, var(--teal-light), var(--teal), #008B94); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-transform: uppercase; margin-bottom: 54px; text-align: center; }
-        .sidebar-nav-list { display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0; }
-        .sidebar-link-btn { width: 100%; background: transparent; border: 1px solid transparent; color: var(--muted); padding: 14px 20px; border-radius: 12px; text-align: left; font-family: 'Inter', sans-serif; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 12px; box-sizing: border-box; }
-        .sidebar-link-btn.active { color: #0f172a; background: linear-gradient(135deg, var(--teal-light), var(--teal)); font-weight: 600; }
-        .sidebar-download-btn { margin-top: auto; background: rgba(0, 194, 203, 0.08); border: 1px dashed var(--teal); color: var(--teal-light); padding: 14px 20px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 12px; box-sizing: border-box; }
+
+        /* ── Slim sidebar ── */
+        .dashboard-sidebar {
+          width: 72px;
+          min-width: 72px;
+          border-right: 1px solid var(--border);
+          background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+          padding: 24px 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          box-sizing: border-box;
+          position: sticky;
+          top: 0;
+          height: 100vh;
+        }
+        .sidebar-brand {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.15em;
+          background: linear-gradient(135deg, var(--teal-light), var(--teal), #008B94);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-transform: uppercase;
+          margin-bottom: 32px;
+          text-align: center;
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          line-height: 1;
+        }
+        .sidebar-nav-list { display: flex; flex-direction: column; gap: 6px; list-style: none; padding: 0; margin: 0; width: 100%; align-items: center; flex: 1; }
+        .sidebar-link-btn {
+          width: 48px;
+          height: 48px;
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--muted);
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          padding: 0;
+          box-sizing: border-box;
+          position: relative;
+        }
+        .sidebar-link-btn .nav-icon { font-size: 18px; line-height: 1; }
+        .sidebar-link-btn .nav-label { font-family: 'Inter', sans-serif; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); line-height: 1; }
+        .sidebar-link-btn.active { color: #0f172a; background: linear-gradient(135deg, var(--teal-light), var(--teal)); }
+        .sidebar-link-btn.active .nav-label { color: #0f172a; }
+        .sidebar-link-btn:not(.active):hover { border-color: var(--border); background: rgba(0,194,203,0.08); }
+        .sidebar-download-btn {
+          width: 48px;
+          height: 48px;
+          margin-top: auto;
+          background: rgba(0, 194, 203, 0.08);
+          border: 1px dashed var(--teal);
+          color: var(--teal-light);
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        .sidebar-download-btn .nav-icon { font-size: 18px; line-height: 1; }
+        .sidebar-download-btn .nav-label { font-family: 'Inter', sans-serif; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal-light); line-height: 1; }
         .sidebar-download-btn:hover { background: linear-gradient(135deg, var(--teal-light), var(--teal)); color: #0f172a; border-style: solid; }
-        .workspace-viewport { flex: 1; padding: 50px 50px; position: relative; z-index: 1; box-sizing: border-box; width: calc(100% - 280px); overflow-y: auto; }
-        .workspace-header-hero h1 { font-family: 'Montserrat', sans-serif; font-size: 40px; font-weight: 400; color: #fff; margin: 0 0 30px 0; }
-        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; width: 100%; }
+        .sidebar-download-btn:hover .nav-label { color: #0f172a; }
+
+        /* ── Main viewport ── */
+        .workspace-viewport { flex: 1; padding: 40px 40px; position: relative; z-index: 1; box-sizing: border-box; width: calc(100% - 72px); overflow-y: auto; }
+        .workspace-header-hero h1 { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 400; color: #fff; margin: 0 0 28px 0; }
+
+        /* ── Property grid — more columns now that sidebar is slim ── */
+        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; width: 100%; }
         .property-card { background: linear-gradient(145deg, var(--card), var(--navy)); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; height: 100%; }
         .property-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 194, 203, 0.15); }
-        .property-image { width: 100%; height: 200px; object-fit: cover; background: rgba(0, 0, 0, 0.3); }
-        .property-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-        .property-title { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 600; margin: 0 0 8px 0; color: #fff; }
-        .property-location { font-size: 13px; color: var(--muted); margin: 0 0 12px 0; }
-        .property-price { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 600; color: var(--teal-light); margin: auto 0 16px 0; }
-        .property-button { width: 100%; background: linear-gradient(135deg, var(--teal-light), var(--teal)); border: none; border-radius: 8px; padding: 12px; color: #0f172a; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; }
-        .property-button:hover { transform: translateY(-2px); }
-        #buyer-properties-map { width: 100%; height: 600px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0, 194, 203, 0.1); }
+        .property-image { width: 100%; height: 180px; object-fit: cover; background: rgba(0, 0, 0, 0.3); }
+        .property-info { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .property-title { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 600; margin: 0 0 6px 0; color: #fff; }
+        .property-location { font-size: 12px; color: var(--muted); margin: 0 0 10px 0; }
+        .property-price { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 600; color: var(--teal-light); margin: auto 0 14px 0; }
+        .property-button {
+          width: 100%;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          border: none;
+          border-radius: 10px;
+          padding: 14px;
+          color: #0f172a;
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+          animation: pulse-glow 2.5s ease-in-out infinite;
+          position: relative;
+          overflow: hidden;
+        }
+        .property-button::before {
+          content: '';
+          position: absolute;
+          top: 0; left: -100%;
+          width: 60%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+          transition: left 0.5s ease;
+        }
+        .property-button:hover::before { left: 160%; }
+        .property-button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 24px rgba(245, 158, 11, 0.45);
+          background: linear-gradient(135deg, #fbbf24, #f59e0b);
+          animation: none;
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+          50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+        }
+
+        /* ── Dashboard overview stat strip ── */
+        .overview-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card { background: linear-gradient(145deg, var(--card), var(--navy)); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+        .stat-value { font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 600; color: var(--teal-light); }
+
+        #buyer-properties-map { width: 100%; height: calc(100vh - 160px); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0, 194, 203, 0.1); }
       `}} />
 
       <div className="dashboard-container-root">
         <aside className="dashboard-sidebar">
           <div className="sidebar-brand">Terralink</div>
-          <ul className="sidebar-nav-list" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <li>
-              <button type="button" className={`sidebar-link-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-                📊 Overview
-              </button>
-            </li>
-            <li>
-              <button type="button" className={`sidebar-link-btn ${activeTab === 'listings' ? 'active' : ''}`} onClick={() => setActiveTab('listings')}>
-                🏘️ Browse Properties
-              </button>
-            </li>
-            <li>
-              <button type="button" className={`sidebar-link-btn ${activeTab === 'map' ? 'active' : ''}`} onClick={() => setActiveTab('map')}>
-                🗺️ Property Map
-              </button>
-            </li>
-            <li>
-              <button type="button" className={`sidebar-link-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-                ⚙️ Settings
-              </button>
-            </li>
-            <li style={{ marginTop: 'auto' }}>
-              <button type="button" className="sidebar-download-btn" onClick={handleDownloadClick}>
-                📥 Download App
-              </button>
-            </li>
+          <ul className="sidebar-nav-list">
+            {navItems.map(({ tab, icon, label }) => (
+              <li key={tab}>
+                <button
+                  type="button"
+                  className={`sidebar-link-btn ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                  title={label}
+                >
+                  <span className="nav-icon">{icon}</span>
+                  <span className="nav-label">{label}</span>
+                </button>
+              </li>
+            ))}
           </ul>
+          <button type="button" className="sidebar-download-btn" onClick={handleDownloadClick} title="Download App">
+            <span className="nav-icon">📥</span>
+            <span className="nav-label">App</span>
+          </button>
         </aside>
 
         <main className="workspace-viewport">
           {activeTab === 'dashboard' && (
             <div>
               <div className="workspace-header-hero"><h1>🏠 Buyer Dashboard</h1></div>
+              <div className="overview-stats">
+                <div className="stat-card">
+                  <div className="stat-label">Total Listings</div>
+                  <div className="stat-value">{properties.length}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Featured</div>
+                  <div className="stat-value">{Math.min(properties.length, 3)}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Currency</div>
+                  <div className="stat-value" style={{ fontSize: '18px', paddingTop: '4px' }}>{currency}</div>
+                </div>
+              </div>
               <div className="properties-grid">
                 {properties.slice(0, 3).map((item) => (
                   <div key={item.id} className="property-card">
