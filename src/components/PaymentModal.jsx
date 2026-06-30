@@ -1,52 +1,50 @@
 import React, { useState } from 'react';
-import { supabase } from '/src/supabaseClient.js';
 
 export default function PaymentModal({ property, buyerId, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const currency = 'TZS';
 
-  const totalAmount = parseFloat(property?.price || 0);
-  const platformCommission = totalAmount * 0.02;
-  const sellerPayout = totalAmount * 0.98;
+  // Displayed amount comes from the property record for the UI preview only.
+  // The server will independently verify this against the real listing price —
+  // this client-side number is never trusted for the actual transaction.
+  const displayAmount = parseFloat(property?.price || 0);
+  const platformCommission = displayAmount * 0.02;
+  const sellerPayout = displayAmount * 0.98;
 
   const handleInitiatePayment = async () => {
     if (!property || !buyerId) {
-      alert('Error: Missing structural session configuration or property variables.');
+      setError('Missing session or property information. Please refresh and try again.');
       return;
     }
 
-    try {
-      setLoading(true);
-      const trackingReference = `TL-${Math.floor(100000 + Math.random() * 900000)}`;
-      const sellerIdentifier = property.seller_id || property.user_id;
+    setError(null);
+    setLoading(true);
 
-      if (!sellerIdentifier) {
-        throw new Error('Could not resolve the seller identification token from this listing record.');
+    try {
+      const response = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: property.id,
+          amount: displayAmount,
+          paymentMethod: 'bank', // default channel; swap to a real selector once mobile money UI is wired in
+          phoneNumber: null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Payment initiation failed.');
       }
 
-      const payload = {
-        property_id: Number(property.id),
-        buyer_id: buyerId,
-        seller_id: sellerIdentifier,
-        amount_total: totalAmount,
-        status: 'pending',
-        payment_reference: trackingReference
-      };
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([payload])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      alert(`Transaction Initiated Successfully!\nReference: ${trackingReference}\n\nRedirecting to secure gateway checkout...`);
-      
+      // Server returns status: "pending" — no payment provider is connected yet,
+      // so this is recorded but NOT paid. Don't tell the user it's "successful."
       if (onSuccess) onSuccess(data);
       if (onClose) onClose();
     } catch (err) {
-      alert(`Payment Processing System Error: ${err.message}`);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -71,9 +69,9 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
         <div style={styles.ledgerContainer}>
           <div style={styles.ledgerRow}>
             <span>Offer Amount</span>
-            <span style={styles.boldText}>{currency} {totalAmount.toLocaleString()}</span>
+            <span style={styles.boldText}>{currency} {displayAmount.toLocaleString()}</span>
           </div>
-          
+
           <div style={styles.ledgerRow}>
             <span style={styles.goldText}>Platform Security Fee (2%)</span>
             <span style={styles.goldText}>+ {currency} {platformCommission.toLocaleString()}</span>
@@ -87,13 +85,17 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
           </div>
         </div>
 
+        {error && (
+          <div style={styles.errorBox}>⚠️ {error}</div>
+        )}
+
         <button 
           type="button"
           onClick={handleInitiatePayment} 
           disabled={loading} 
           style={styles.payBtn}
         >
-          {loading ? 'Processing...' : `✓ Confirm Secure Offer - ${currency} ${totalAmount.toLocaleString()}`}
+          {loading ? 'Processing...' : `✓ Confirm Secure Offer - ${currency} ${displayAmount.toLocaleString()}`}
         </button>
       </div>
     </div>
@@ -203,6 +205,15 @@ const styles = {
     border: 'none',
     borderTop: '1px solid rgba(201, 168, 76, 0.15)',
     margin: '14px 0'
+  },
+  errorBox: {
+    color: '#ff8585',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    fontSize: '13px',
+    borderLeft: '3px solid #ff6b6b'
   },
   payBtn: {
     width: '100%',
