@@ -14,6 +14,13 @@ export default function SellerDashboard() {
     title: '', location: '', price: '', description: '', image: null, lat: null, lng: null
   });
 
+  // ── Map location state ───────────────────────────────────────────
+  const [pendingLat, setPendingLat] = useState(null);   // clicked but not yet saved
+  const [pendingLng, setPendingLng] = useState(null);
+  const [locationSaved, setLocationSaved] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationMsg, setLocationMsg] = useState(null); // { type: 'success'|'error'|'info', text }
+
   // ── Payout method state ──────────────────────────────────────────
   const [payoutMethods, setPayoutMethods] = useState([]);
   const [payoutLoading, setPayoutLoading] = useState(false);
@@ -21,22 +28,17 @@ export default function SellerDashboard() {
   const [payoutError, setPayoutError] = useState(null);
   const [payoutType, setPayoutType] = useState('mpesa');
   const [payoutForm, setPayoutForm] = useState({
-    phone: '',
-    bankName: '',
-    accountName: '',
-    accountNumber: '',
-    swiftCode: '',
+    phone: '', bankName: '', accountName: '', accountNumber: '', swiftCode: '',
   });
 
   const { handleDownloadClick } = usePwaDownload();
-
   const isMobileMoney = ['mpesa', 'airtel', 'tigo'].includes(payoutType);
 
   const payoutOptions = [
-    { value: 'mpesa',  label: 'M-Pesa',       sub: 'Vodacom',   badgeBg: '#CC0000', badgeColor: '#fff', badgeText: 'M-PESA' },
-    { value: 'airtel', label: 'Airtel Money',  sub: 'Airtel',    badgeBg: '#E40000', badgeColor: '#fff', badgeText: 'AIRTEL' },
-    { value: 'tigo',   label: 'Tigo Pesa',     sub: 'Mixx/Yas',  badgeBg: '#FFD700', badgeColor: '#003087', badgeText: 'MIXX' },
-    { value: 'bank',   label: 'Bank Account',  sub: 'Wire / Escrow', badgeBg: null, badgeColor: null, badgeText: 'BANK' },
+    { value: 'mpesa',  label: 'M-Pesa',      sub: 'Vodacom',       badgeBg: '#CC0000', badgeColor: '#fff',    badgeText: 'M-PESA' },
+    { value: 'airtel', label: 'Airtel Money', sub: 'Airtel',        badgeBg: '#E40000', badgeColor: '#fff',    badgeText: 'AIRTEL' },
+    { value: 'tigo',   label: 'Tigo Pesa',    sub: 'Mixx/Yas',      badgeBg: '#FFD700', badgeColor: '#003087', badgeText: 'MIXX'   },
+    { value: 'bank',   label: 'Bank Account', sub: 'Wire / Escrow', badgeBg: null,      badgeColor: null,      badgeText: 'BANK'   },
   ];
 
   useEffect(() => {
@@ -45,19 +47,35 @@ export default function SellerDashboard() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'payout' && currentSellerId) {
-      fetchPayoutMethods();
-    }
+    if (activeTab === 'payout' && currentSellerId) fetchPayoutMethods();
   }, [activeTab, currentSellerId]);
 
   function loadGoogleMapsScript() {
     if (window.google && window.google.maps) { setMapLoaded(true); return; }
     const script = document.createElement('script');
-    script.src = 'https://maps.googleapis.com/maps/api/js?v=weekly&key=';
+    script.src = 'https://maps.googleapis.com/maps/api/js?v=weekly&libraries=geocoding&key=';
     script.async = true;
     script.defer = true;
     script.onload = () => setMapLoaded(true);
     document.body.appendChild(script);
+  }
+
+  // ── Drop a marker on the map at given coords (pending state) ────
+  function dropPendingMarker(lat, lng) {
+    if (!window.sellerMapInstance) return;
+    if (window.sellerMarker) window.sellerMarker.setMap(null);
+    window.sellerMarker = new window.google.maps.Marker({
+      position: { lat, lng },
+      map: window.sellerMapInstance,
+      title: 'Property Location',
+      icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+      animation: window.google.maps.Animation.DROP,
+    });
+    window.sellerMapInstance.panTo({ lat, lng });
+    setPendingLat(lat);
+    setPendingLng(lng);
+    setLocationSaved(false);
+    setLocationMsg({ type: 'info', text: 'Pin placed. Click "Save Location" to confirm.' });
   }
 
   useEffect(() => {
@@ -71,21 +89,86 @@ export default function SellerDashboard() {
             mapTypeId: window.google.maps.MapTypeId.ROADMAP,
           });
           window.sellerMapInstance.addListener('click', (e) => {
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
-            if (window.sellerMarker) window.sellerMarker.setMap(null);
-            window.sellerMarker = new window.google.maps.Marker({
-              position: { lat, lng },
-              map: window.sellerMapInstance,
-              title: 'Property Location',
-              icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
-            });
-            setNewProperty(prev => ({ ...prev, lat, lng }));
+            dropPendingMarker(e.latLng.lat(), e.latLng.lng());
           });
         }
       }, 100);
     }
   }, [showCreateProperty, mapLoaded]);
+
+  // ── Save Location button handler ─────────────────────────────────
+  function handleSaveLocation() {
+    if (pendingLat === null || pendingLng === null) return;
+    setNewProperty(prev => ({ ...prev, lat: pendingLat, lng: pendingLng }));
+    setLocationSaved(true);
+    setLocationMsg({ type: 'success', text: `Location saved — Lat ${pendingLat.toFixed(5)}, Lng ${pendingLng.toFixed(5)}` });
+
+    // Change marker to green to confirm saved state
+    if (window.sellerMarker) {
+      window.sellerMarker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+    }
+  }
+
+  // ── Auto-detect location (GPS → geocoding fallback) ──────────────
+  async function handleDetectLocation() {
+    setDetectingLocation(true);
+    setLocationMsg({ type: 'info', text: 'Detecting your location...' });
+
+    // Step 1: Try GPS
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setDetectingLocation(false);
+          dropPendingMarker(lat, lng);
+          setLocationMsg({ type: 'info', text: '📍 GPS location detected. Click "Save Location" to confirm.' });
+        },
+        async () => {
+          // GPS denied or failed — fall back to geocoding
+          setLocationMsg({ type: 'info', text: 'GPS unavailable. Trying location name...' });
+          await geocodeFromName();
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      // Browser doesn't support geolocation — go straight to geocoding
+      await geocodeFromName();
+    }
+  }
+
+  // ── Geocode the typed location name using Google Maps Geocoding ──
+  async function geocodeFromName() {
+    const locationName = newProperty.location?.trim();
+    if (!locationName) {
+      setDetectingLocation(false);
+      setLocationMsg({ type: 'error', text: 'Please type a location name first so we can find it on the map.' });
+      return;
+    }
+
+    try {
+      if (!window.google?.maps) throw new Error('Maps not loaded');
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode(
+        { address: `${locationName}, Tanzania` },
+        (results, status) => {
+          setDetectingLocation(false);
+          if (status === 'OK' && results[0]) {
+            const loc = results[0].geometry.location;
+            const lat = loc.lat();
+            const lng = loc.lng();
+            dropPendingMarker(lat, lng);
+            setLocationMsg({ type: 'info', text: `📍 Found "${results[0].formatted_address}". Click "Save Location" to confirm.` });
+          } else {
+            setLocationMsg({ type: 'error', text: `Could not find "${locationName}" on the map. Try a more specific name or click manually.` });
+          }
+        }
+      );
+    } catch {
+      setDetectingLocation(false);
+      setLocationMsg({ type: 'error', text: 'Location detection failed. Please click on the map manually.' });
+    }
+  }
 
   async function fetchSellerData() {
     try {
@@ -114,9 +197,7 @@ export default function SellerDashboard() {
     try {
       setPayoutLoading(true);
       const { data, error } = await supabase
-        .from('seller_payout_methods')
-        .select('*')
-        .eq('seller_id', currentSellerId)
+        .from('seller_payout_methods').select('*').eq('seller_id', currentSellerId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPayoutMethods(data || []);
@@ -130,41 +211,26 @@ export default function SellerDashboard() {
   async function handleSavePayoutMethod() {
     setPayoutError(null);
     setPayoutSuccess(null);
-
-    if (isMobileMoney && !payoutForm.phone) {
-      setPayoutError('Please enter your mobile wallet phone number.');
-      return;
-    }
+    if (isMobileMoney && !payoutForm.phone) { setPayoutError('Please enter your mobile wallet phone number.'); return; }
     const digits = payoutForm.phone.replace(/^\+/, '');
     if (isMobileMoney && !/^255\d{9}$/.test(digits) && !/^0\d{9}$/.test(digits)) {
-      setPayoutError('Enter a valid Tanzanian number — e.g. 255712345678 or 0712345678.');
-      return;
+      setPayoutError('Enter a valid Tanzanian number — e.g. 255712345678 or 0712345678.'); return;
     }
-    if (!isMobileMoney) {
-      if (!payoutForm.bankName || !payoutForm.accountName || !payoutForm.accountNumber) {
-        setPayoutError('Please fill in all bank account fields.');
-        return;
-      }
+    if (!isMobileMoney && (!payoutForm.bankName || !payoutForm.accountName || !payoutForm.accountNumber)) {
+      setPayoutError('Please fill in all bank account fields.'); return;
     }
-
     try {
       setPayoutLoading(true);
-      const payload = {
-        seller_id: currentSellerId,
-        method_type: payoutType,
+      const { error } = await supabase.from('seller_payout_methods').insert([{
+        seller_id: currentSellerId, method_type: payoutType,
         phone_number: isMobileMoney ? payoutForm.phone : null,
         bank_name: !isMobileMoney ? payoutForm.bankName : null,
         account_name: !isMobileMoney ? payoutForm.accountName : null,
         account_number: !isMobileMoney ? payoutForm.accountNumber : null,
         swift_code: !isMobileMoney ? payoutForm.swiftCode : null,
-        is_primary: payoutMethods.length === 0, // first one added becomes primary
-      };
-
-      const { error } = await supabase
-        .from('seller_payout_methods')
-        .insert([payload]);
+        is_primary: payoutMethods.length === 0,
+      }]);
       if (error) throw error;
-
       setPayoutSuccess('Payout method saved successfully.');
       setPayoutForm({ phone: '', bankName: '', accountName: '', accountNumber: '', swiftCode: '' });
       fetchPayoutMethods();
@@ -177,59 +243,42 @@ export default function SellerDashboard() {
 
   async function handleDeletePayoutMethod(id) {
     try {
-      const { error } = await supabase
-        .from('seller_payout_methods')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('seller_payout_methods').delete().eq('id', id);
       if (error) throw error;
       fetchPayoutMethods();
-    } catch (err) {
-      alert('Error deleting payout method: ' + err.message);
-    }
+    } catch (err) { alert('Error deleting payout method: ' + err.message); }
   }
 
   async function handleSetPrimary(id) {
     try {
-      await supabase
-        .from('seller_payout_methods')
-        .update({ is_primary: false })
-        .eq('seller_id', currentSellerId);
-      await supabase
-        .from('seller_payout_methods')
-        .update({ is_primary: true })
-        .eq('id', id);
+      await supabase.from('seller_payout_methods').update({ is_primary: false }).eq('seller_id', currentSellerId);
+      await supabase.from('seller_payout_methods').update({ is_primary: true }).eq('id', id);
       fetchPayoutMethods();
-    } catch (err) {
-      alert('Error updating primary method: ' + err.message);
-    }
+    } catch (err) { alert('Error updating primary method: ' + err.message); }
   }
 
   const handleImageUpload = async (file) => {
     try {
       const fileName = `${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from('property_images')
-        .upload(`${currentSellerId}/${fileName}`, file);
+      const { error } = await supabase.storage.from('property_images').upload(`${currentSellerId}/${fileName}`, file);
       if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage
-        .from('property_images')
-        .getPublicUrl(`${currentSellerId}/${fileName}`);
+      const { data: { publicUrl } } = supabase.storage.from('property_images').getPublicUrl(`${currentSellerId}/${fileName}`);
       return publicUrl;
-    } catch (err) {
-      alert('Error uploading image: ' + err.message);
-      return null;
-    }
+    } catch (err) { alert('Error uploading image: ' + err.message); return null; }
   };
 
   const handleCreateProperty = async (e) => {
     e.preventDefault();
+    if (!newProperty.title || !newProperty.location || !newProperty.price) {
+      alert('Please fill in all required fields.'); return;
+    }
+    if (!newProperty.lat || !newProperty.lng) {
+      alert('Please set and save the property location on the map before listing.'); return;
+    }
+    if (!locationSaved) {
+      alert('You placed a pin but haven\'t saved it yet. Click "Save Location" first.'); return;
+    }
     try {
-      if (!newProperty.title || !newProperty.location || !newProperty.price) {
-        alert('Please fill in all fields'); return;
-      }
-      if (!newProperty.lat || !newProperty.lng) {
-        alert('Please click on the map to set the property location'); return;
-      }
       let imageUrl = null;
       if (newProperty.image) imageUrl = await handleImageUpload(newProperty.image);
       const { error } = await supabase.from('properties').insert([{
@@ -240,13 +289,13 @@ export default function SellerDashboard() {
       if (error) throw error;
       alert('✓ Property listed with location marker!');
       setNewProperty({ title: '', location: '', price: '', description: '', image: null, lat: null, lng: null });
+      setPendingLat(null); setPendingLng(null);
+      setLocationSaved(false); setLocationMsg(null);
       setShowCreateProperty(false);
       window.sellerMapInstance = null;
       if (window.sellerMarker) window.sellerMarker.setMap(null);
       fetchSellerData();
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+    } catch (err) { alert('Error: ' + err.message); }
   };
 
   const handleSignOut = async () => {
@@ -254,14 +303,10 @@ export default function SellerDashboard() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       window.location.reload();
-    } catch (error) {
-      alert(`Sign Out Exception: ${error.message}`);
-    }
+    } catch (error) { alert(`Sign Out Exception: ${error.message}`); }
   };
 
-  const totalEarnings = transactions
-    .filter(t => t.status === 'completed')
-    .reduce((sum, t) => sum + (Number(t.amount_total) * 0.98), 0);
+  const totalEarnings = transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + (Number(t.amount_total) * 0.98), 0);
   const pendingPayments = transactions.filter(t => t.status === 'pending').length;
 
   const navTabs = [
@@ -273,16 +318,20 @@ export default function SellerDashboard() {
 
   const inputStyle = {
     width: '100%', padding: '12px 14px', borderRadius: '10px',
-    border: '1px solid rgba(201,168,76,0.2)',
-    backgroundColor: 'rgba(0,0,0,0.25)', color: '#E8DFC8',
-    boxSizing: 'border-box', outline: 'none',
+    border: '1px solid rgba(201,168,76,0.2)', backgroundColor: 'rgba(0,0,0,0.25)',
+    color: '#E8DFC8', boxSizing: 'border-box', outline: 'none',
     fontSize: '14px', fontFamily: "'Jost', sans-serif",
   };
 
   const labelStyle = {
-    display: 'block', marginBottom: '8px',
-    color: '#C9A84C', fontSize: '12px',
-    letterSpacing: '0.1em', textTransform: 'uppercase',
+    display: 'block', marginBottom: '8px', color: '#C9A84C',
+    fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase',
+  };
+
+  const msgColors = {
+    success: { color: '#10b981', bg: 'rgba(16,185,129,0.1)', border: '#10b981' },
+    error:   { color: '#ff8585', bg: 'rgba(255,107,107,0.1)', border: '#ff6b6b' },
+    info:    { color: '#E8C87A', bg: 'rgba(201,168,76,0.08)', border: '#C9A84C' },
   };
 
   return (
@@ -325,27 +374,21 @@ export default function SellerDashboard() {
         }
         .seller-content { flex: 1; padding: 40px; overflow-y: auto; }
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 36px; }
-        .stat-card {
-          background: linear-gradient(145deg, #131C30, #192340);
-          border: 1px solid var(--border); border-radius: 14px; padding: 22px 20px;
-        }
+        .stat-card { background: linear-gradient(145deg, #131C30, #192340); border: 1px solid var(--border); border-radius: 14px; padding: 22px 20px; }
         .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
         .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; color: var(--gold-light); }
         .section-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: var(--gold-light); margin: 0 0 28px 0; }
         .payout-method-card {
-          background: linear-gradient(145deg, #131C30, #192340);
-          border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px;
-          display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+          background: linear-gradient(145deg, #131C30, #192340); border: 1px solid var(--border);
+          border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between;
+          align-items: center; margin-bottom: 12px;
         }
-        .payout-badge {
-          font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px;
-          letter-spacing: 0.05em; margin-right: 12px;
-        }
+        .payout-badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; margin-right: 12px; }
         .btn-primary {
-          background: linear-gradient(135deg, #E8C87A, #C9A84C); border: none;
-          border-radius: 10px; padding: 13px 20px; color: #0A0F1E;
-          font-weight: 700; font-size: 14px; text-transform: uppercase;
-          letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s; font-family: 'Jost', sans-serif;
+          background: linear-gradient(135deg, #E8C87A, #C9A84C); border: none; border-radius: 10px;
+          padding: 13px 20px; color: #0A0F1E; font-weight: 700; font-size: 14px;
+          text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer;
+          transition: all 0.2s; font-family: 'Jost', sans-serif;
         }
         .btn-ghost {
           background: transparent; border: 1px solid var(--border); border-radius: 8px;
@@ -358,7 +401,28 @@ export default function SellerDashboard() {
           border-radius: 8px; padding: 8px 14px; color: #ef4444;
           font-size: 12px; cursor: pointer; font-family: 'Jost', sans-serif;
         }
+        .map-toolbar {
+          display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;
+        }
+        .btn-detect {
+          background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3);
+          border-radius: 8px; padding: 10px 16px; color: var(--gold-light);
+          font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Jost', sans-serif;
+          display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-detect:hover { background: rgba(201,168,76,0.18); border-color: var(--gold); }
+        .btn-detect:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-save-location {
+          background: linear-gradient(135deg, #10b981, #059669); border: none;
+          border-radius: 8px; padding: 10px 16px; color: #fff;
+          font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Jost', sans-serif;
+          display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .btn-save-location:disabled { opacity: 0.4; cursor: not-allowed; background: #374151; }
+        .btn-save-location.saved { background: linear-gradient(135deg, #059669, #047857); }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}} />
 
       <div className="seller-root">
@@ -368,12 +432,9 @@ export default function SellerDashboard() {
           <div className="seller-brand">Terra</div>
           <nav className="seller-nav">
             {navTabs.map(({ key, icon, label }) => (
-              <button
-                key={key}
-                type="button"
+              <button key={key} type="button"
                 className={`seller-nav-btn ${activeTab === key ? 'active' : ''}`}
-                onClick={() => setActiveTab(key)}
-                title={label}
+                onClick={() => setActiveTab(key)} title={label}
               >
                 <span className="nav-icon">{icon}</span>
                 <span className="nav-label">{label}</span>
@@ -388,8 +449,6 @@ export default function SellerDashboard() {
         </aside>
 
         <div className="seller-main">
-
-          {/* ── Top bar ── */}
           <header className="seller-topbar">
             <h1 style={{ margin: 0, fontSize: '22px', fontFamily: "'Cormorant Garamond', serif", color: 'var(--gold-light)', letterSpacing: '0.08em' }}>
               {navTabs.find(t => t.key === activeTab)?.icon} {navTabs.find(t => t.key === activeTab)?.label}
@@ -407,25 +466,11 @@ export default function SellerDashboard() {
             {activeTab === 'dashboard' && (
               <div>
                 <div className="stat-grid">
-                  <div className="stat-card">
-                    <div className="stat-label">Total Earnings</div>
-                    <div className="stat-value">TZS {totalEarnings.toLocaleString()}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Active Listings</div>
-                    <div className="stat-value">{properties.length}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Pending Payments</div>
-                    <div className="stat-value" style={{ color: 'var(--gold)' }}>{pendingPayments}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Total Transactions</div>
-                    <div className="stat-value">{transactions.length}</div>
-                  </div>
+                  <div className="stat-card"><div className="stat-label">Total Earnings</div><div className="stat-value">TZS {totalEarnings.toLocaleString()}</div></div>
+                  <div className="stat-card"><div className="stat-label">Active Listings</div><div className="stat-value">{properties.length}</div></div>
+                  <div className="stat-card"><div className="stat-label">Pending Payments</div><div className="stat-value" style={{ color: 'var(--gold)' }}>{pendingPayments}</div></div>
+                  <div className="stat-card"><div className="stat-label">Total Transactions</div><div className="stat-value">{transactions.length}</div></div>
                 </div>
-
-                {/* Recent transactions preview */}
                 <h2 className="section-title" style={{ fontSize: '20px' }}>Recent Activity</h2>
                 {transactions.slice(0, 3).map(txn => (
                   <div key={txn.id} className="payout-method-card">
@@ -448,7 +493,13 @@ export default function SellerDashboard() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
                   <h2 className="section-title" style={{ margin: 0 }}>Your Listed Properties</h2>
-                  <button type="button" className="btn-primary" onClick={() => setShowCreateProperty(!showCreateProperty)}>
+                  <button type="button" className="btn-primary" onClick={() => {
+                    setShowCreateProperty(!showCreateProperty);
+                    setPendingLat(null); setPendingLng(null);
+                    setLocationSaved(false); setLocationMsg(null);
+                    window.sellerMapInstance = null;
+                    if (window.sellerMarker) { window.sellerMarker.setMap(null); window.sellerMarker = null; }
+                  }}>
                     {showCreateProperty ? '✕ Cancel' : '+ Add Property'}
                   </button>
                 </div>
@@ -461,7 +512,7 @@ export default function SellerDashboard() {
                   }}>
                     {[
                       { label: 'Property Title', key: 'title', type: 'text', placeholder: 'e.g., Luxury Villa in Masaki' },
-                      { label: 'Location Name', key: 'location', type: 'text', placeholder: 'e.g., Dar es Salaam' },
+                      { label: 'Location Name', key: 'location', type: 'text', placeholder: 'e.g., Masaki, Dar es Salaam' },
                       { label: 'Price (TZS)', key: 'price', type: 'number', placeholder: '500000000' },
                     ].map(f => (
                       <div key={f.key} style={{ marginBottom: '16px' }}>
@@ -484,21 +535,63 @@ export default function SellerDashboard() {
                         onChange={(e) => setNewProperty({ ...newProperty, image: e.target.files?.[0] })}
                         style={{ ...inputStyle, cursor: 'pointer' }} />
                     </div>
+
+                    {/* ── Map section ── */}
                     <div style={{ marginBottom: '20px' }}>
-                      <label style={labelStyle}>🗺️ Set Location on Map (Click to place marker)</label>
+                      <label style={labelStyle}>🗺️ Property Location</label>
+
+                      {/* Toolbar */}
+                      <div className="map-toolbar">
+                        <button
+                          type="button"
+                          className="btn-detect"
+                          onClick={handleDetectLocation}
+                          disabled={detectingLocation}
+                        >
+                          {detectingLocation ? (
+                            <>
+                              <span style={{ width: '12px', height: '12px', border: '2px solid #E8C87A', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                              Detecting...
+                            </>
+                          ) : '📡 Auto-Detect Location'}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`btn-save-location ${locationSaved ? 'saved' : ''}`}
+                          onClick={handleSaveLocation}
+                          disabled={pendingLat === null || locationSaved}
+                        >
+                          {locationSaved ? '✓ Location Saved' : '📌 Save Location'}
+                        </button>
+                      </div>
+
+                      <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 10px 0' }}>
+                        Click anywhere on the map to place a pin, or use Auto-Detect. Then click "Save Location" to confirm.
+                      </p>
+
+                      {/* Map */}
                       <div id="property-location-map" style={{
                         width: '100%', height: '380px', borderRadius: '10px',
-                        border: '1px solid var(--border)', marginBottom: '12px',
+                        border: `1px solid ${locationSaved ? '#10b981' : 'var(--border)'}`,
+                        marginBottom: '10px', transition: 'border-color 0.3s',
                       }} />
-                      {newProperty.lat && newProperty.lng && (
+
+                      {/* Status message */}
+                      {locationMsg && (
                         <div style={{
-                          background: 'rgba(201,168,76,0.08)', border: '1px solid var(--border)',
-                          borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--gold-light)',
+                          background: msgColors[locationMsg.type].bg,
+                          border: `1px solid ${msgColors[locationMsg.type].border}`,
+                          borderLeft: `3px solid ${msgColors[locationMsg.type].border}`,
+                          color: msgColors[locationMsg.type].color,
+                          borderRadius: '8px', padding: '10px 14px',
+                          fontSize: '13px', lineHeight: '1.5',
                         }}>
-                          ✓ Location: Lat {newProperty.lat.toFixed(4)}, Lng {newProperty.lng.toFixed(4)}
+                          {locationMsg.text}
                         </div>
                       )}
                     </div>
+
                     <button type="submit" className="btn-primary" style={{ width: '100%', padding: '15px' }}>
                       🚀 List Property
                     </button>
@@ -562,33 +655,22 @@ export default function SellerDashboard() {
                   Add where you'd like to receive your property sale proceeds (98% of each transaction).
                 </p>
 
-                {/* Saved methods */}
-                {payoutLoading ? (
-                  <p style={{ color: 'var(--muted)' }}>Loading...</p>
-                ) : payoutMethods.length > 0 && (
+                {payoutLoading ? <p style={{ color: 'var(--muted)' }}>Loading...</p> : payoutMethods.length > 0 && (
                   <div style={{ marginBottom: '36px' }}>
-                    <h3 style={{ color: 'var(--gold)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
-                      Saved Methods
-                    </h3>
+                    <h3 style={{ color: 'var(--gold)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Saved Methods</h3>
                     {payoutMethods.map(m => {
                       const opt = payoutOptions.find(o => o.value === m.method_type);
                       return (
                         <div key={m.id} className="payout-method-card">
                           <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <span className="payout-badge" style={{
-                              background: opt?.badgeBg || 'rgba(201,168,76,0.15)',
-                              color: opt?.badgeColor || '#C9A84C',
-                            }}>
+                            <span className="payout-badge" style={{ background: opt?.badgeBg || 'rgba(201,168,76,0.15)', color: opt?.badgeColor || '#C9A84C' }}>
                               {opt?.badgeText || m.method_type.toUpperCase()}
                             </span>
                             <div>
                               <div style={{ fontWeight: '600', color: 'var(--gold-light)', fontSize: '14px' }}>
                                 {opt?.label}
                                 {m.is_primary && (
-                                  <span style={{
-                                    marginLeft: '8px', fontSize: '10px', background: 'rgba(16,185,129,0.15)',
-                                    color: '#10b981', padding: '2px 8px', borderRadius: '20px', fontWeight: '600',
-                                  }}>PRIMARY</span>
+                                  <span style={{ marginLeft: '8px', fontSize: '10px', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '2px 8px', borderRadius: '20px', fontWeight: '600' }}>PRIMARY</span>
                                 )}
                               </div>
                               <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
@@ -597,14 +679,8 @@ export default function SellerDashboard() {
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            {!m.is_primary && (
-                              <button type="button" className="btn-ghost" onClick={() => handleSetPrimary(m.id)}>
-                                Set Primary
-                              </button>
-                            )}
-                            <button type="button" className="btn-danger" onClick={() => handleDeletePayoutMethod(m.id)}>
-                              Remove
-                            </button>
+                            {!m.is_primary && <button type="button" className="btn-ghost" onClick={() => handleSetPrimary(m.id)}>Set Primary</button>}
+                            <button type="button" className="btn-danger" onClick={() => handleDeletePayoutMethod(m.id)}>Remove</button>
                           </div>
                         </div>
                       );
@@ -612,27 +688,13 @@ export default function SellerDashboard() {
                   </div>
                 )}
 
-                {/* Add new method form */}
-                <div style={{
-                  background: 'linear-gradient(145deg, #131C30, #192340)',
-                  border: '1px solid var(--border)', borderRadius: '16px', padding: '28px',
-                }}>
-                  <h3 style={{ color: 'var(--gold)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 20px 0' }}>
-                    Add New Payout Method
-                  </h3>
-
-                  {/* Method type selector */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                    gap: '8px', marginBottom: '24px',
-                  }}>
+                <div style={{ background: 'linear-gradient(145deg, #131C30, #192340)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                  <h3 style={{ color: 'var(--gold)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 20px 0' }}>Add New Payout Method</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '24px' }}>
                     {payoutOptions.map(opt => {
                       const isActive = payoutType === opt.value;
                       return (
-                        <button
-                          type="button"
-                          key={opt.value}
+                        <button type="button" key={opt.value}
                           onClick={() => { setPayoutType(opt.value); setPayoutError(null); setPayoutSuccess(null); }}
                           style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
@@ -643,8 +705,7 @@ export default function SellerDashboard() {
                           }}
                         >
                           <span style={{
-                            fontSize: '10px', fontWeight: '800', padding: '3px 7px', borderRadius: '4px',
-                            letterSpacing: '0.05em',
+                            fontSize: '10px', fontWeight: '800', padding: '3px 7px', borderRadius: '4px', letterSpacing: '0.05em',
                             background: opt.badgeBg || (isActive ? '#C9A84C' : 'rgba(201,168,76,0.15)'),
                             color: opt.badgeColor || (isActive ? '#0A0F1E' : '#C9A84C'),
                             boxShadow: isActive && opt.badgeBg ? '0 0 0 2px #C9A84C' : 'none',
@@ -656,24 +717,16 @@ export default function SellerDashboard() {
                     })}
                   </div>
 
-                  {/* Mobile money fields */}
                   {isMobileMoney && (
                     <div style={{ marginBottom: '20px' }}>
                       <label style={labelStyle}>Mobile Wallet Number</label>
-                      <input
-                        type="tel"
-                        placeholder="e.g. 255712345678"
-                        value={payoutForm.phone}
+                      <input type="tel" placeholder="e.g. 255712345678" value={payoutForm.phone}
                         onChange={(e) => setPayoutForm({ ...payoutForm, phone: e.target.value.replace(/[^\d+]/g, '') })}
-                        style={inputStyle}
-                      />
-                      <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '6px 0 0 0' }}>
-                        Format: 255XXXXXXXXX or 0XXXXXXXXX
-                      </p>
+                        style={inputStyle} />
+                      <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '6px 0 0 0' }}>Format: 255XXXXXXXXX or 0XXXXXXXXX</p>
                     </div>
                   )}
 
-                  {/* Bank fields */}
                   {!isMobileMoney && (
                     <div>
                       {[
@@ -684,44 +737,20 @@ export default function SellerDashboard() {
                       ].map(f => (
                         <div key={f.key} style={{ marginBottom: '16px' }}>
                           <label style={labelStyle}>{f.label}</label>
-                          <input
-                            type="text"
-                            placeholder={f.placeholder}
-                            value={payoutForm[f.key]}
+                          <input type="text" placeholder={f.placeholder} value={payoutForm[f.key]}
                             onChange={(e) => setPayoutForm({ ...payoutForm, [f.key]: e.target.value })}
-                            style={inputStyle}
-                          />
+                            style={inputStyle} />
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {payoutError && (
-                    <div style={{
-                      color: '#ff8585', background: 'rgba(255,107,107,0.1)', padding: '10px 14px',
-                      borderRadius: '8px', marginBottom: '16px', fontSize: '13px',
-                      borderLeft: '3px solid #ff6b6b',
-                    }}>⚠️ {payoutError}</div>
-                  )}
+                  {payoutError && <div style={{ color: '#ff8585', background: 'rgba(255,107,107,0.1)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', borderLeft: '3px solid #ff6b6b' }}>⚠️ {payoutError}</div>}
+                  {payoutSuccess && <div style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', borderLeft: '3px solid #10b981' }}>✓ {payoutSuccess}</div>}
 
-                  {payoutSuccess && (
-                    <div style={{
-                      color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '10px 14px',
-                      borderRadius: '8px', marginBottom: '16px', fontSize: '13px',
-                      borderLeft: '3px solid #10b981',
-                    }}>✓ {payoutSuccess}</div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleSavePayoutMethod}
-                    disabled={payoutLoading}
-                    style={{ width: '100%', padding: '15px', opacity: payoutLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                  >
-                    {payoutLoading && (
-                      <span style={{ width: '13px', height: '13px', border: '2px solid #0A0F1E', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                    )}
+                  <button type="button" className="btn-primary" onClick={handleSavePayoutMethod} disabled={payoutLoading}
+                    style={{ width: '100%', padding: '15px', opacity: payoutLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    {payoutLoading && <span style={{ width: '13px', height: '13px', border: '2px solid #0A0F1E', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />}
                     {payoutLoading ? 'Saving...' : 'Save Payout Method'}
                   </button>
                 </div>
