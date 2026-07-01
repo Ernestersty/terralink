@@ -24,8 +24,12 @@ export function usePwaDownload() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Check if app is already installed (Android + iOS)
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if (isStandalone) {
       setIsInstallable(false);
     }
 
@@ -37,16 +41,21 @@ export function usePwaDownload() {
 
   const handleDownloadClick = async () => {
     if (!deferredPrompt) {
-      alert('App is ready to download! Check your browser menu for "Install" or "Add to Home Screen"');
+      alert(
+        'App is ready to download! Check your browser menu for "Install" or "Add to Home Screen".'
+      );
       return;
     }
 
     try {
       // Show the install prompt
-      deferredPrompt.prompt();
+      await deferredPrompt.prompt();
+
       // Wait for the user to respond to the prompt
       const { outcome } = await deferredPrompt.userChoice;
+
       console.log(`User response to the install prompt: ${outcome}`);
+
       // Clear the saved prompt since it can't be used again
       setDeferredPrompt(null);
       setIsInstallable(false);
