@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function PaymentModal({ property, buyerId, onClose, onSuccess }) {
-  const [step, setStep] = useState('review');   // 'review' | 'payment' | 'pending'
+  const [step, setStep] = useState('review');
   const [paymentMethod, setPaymentMethod] = useState('mpesa');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,11 +15,11 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
   const isMobileMoney = ['mpesa', 'airtel', 'tigo'].includes(paymentMethod);
 
   const paymentMethods = [
-    { value: 'mpesa',  label: 'M-Pesa',       sub: 'Mobile Money', icon: '📱' },
-    { value: 'airtel', label: 'Airtel Money',  sub: 'Mobile Money', icon: '📱' },
-    { value: 'tigo',   label: 'Tigo Pesa',     sub: 'Mobile Money', icon: '📱' },
-    { value: 'card',   label: 'Card',          sub: 'Visa / Mastercard', icon: '💳' },
-    { value: 'bank',   label: 'Bank Transfer', sub: 'Escrow Account', icon: '🏦' },
+    { value: 'mpesa',  label: 'M-Pesa',        sub: 'Mobile Money',   badgeText: 'M-PESA',  badgeBg: '#CC0000', badgeColor: '#fff' },
+    { value: 'airtel', label: 'Airtel Money',   sub: 'Mobile Money',   badgeText: 'AIRTEL',  badgeBg: '#E40000', badgeColor: '#fff' },
+    { value: 'tigo',   label: 'Tigo Pesa',      sub: 'Mobile Money',   badgeText: 'MIXX',    badgeBg: '#FFD700', badgeColor: '#003087' },
+    { value: 'card',   label: 'Card',           sub: 'Visa / Mastercard', badgeText: 'CARD', badgeBg: null,      badgeColor: null },
+    { value: 'bank',   label: 'Bank Transfer',  sub: 'Escrow Account', badgeText: 'BANK',    badgeBg: null,      badgeColor: null },
   ];
 
   const validatePhone = (value) => {
@@ -84,7 +84,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
     }
   };
 
-  // ── Step: Pending confirmation screen ──────────────────────────────
+  // ── Step: Pending ──────────────────────────────────────────────────
   if (step === 'pending') {
     return (
       <div style={styles.overlay}>
@@ -111,11 +111,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
             }}>
               ⚠️ No funds have been moved yet. Payment processing will be enabled once the Selcom merchant integration is live.
             </div>
-            <button
-              type="button"
-              onClick={() => { if (onClose) onClose(); }}
-              style={styles.payBtn}
-            >
+            <button type="button" onClick={() => { if (onClose) onClose(); }} style={styles.payBtn}>
               Close
             </button>
           </div>
@@ -124,7 +120,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
     );
   }
 
-  // ── Step: Payment method + phone input ────────────────────────────
+  // ── Step: Payment ──────────────────────────────────────────────────
   if (step === 'payment') {
     return (
       <div style={styles.overlay}>
@@ -134,11 +130,8 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
             <button type="button" onClick={() => onClose && onClose()} style={styles.closeBtn}>✕</button>
           </div>
 
-          <p style={styles.subtitle}>
-            Choose how you'd like to complete this transaction.
-          </p>
+          <p style={styles.subtitle}>Choose how you'd like to complete this transaction.</p>
 
-          {/* Amount reminder */}
           <div style={{ ...styles.summaryBox, marginBottom: '20px' }}>
             <div style={styles.summaryLabel}>Amount Due</div>
             <div style={{ ...styles.summaryValue, color: '#E8C87A', fontSize: '20px' }}>
@@ -146,41 +139,108 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
             </div>
           </div>
 
-          {/* Payment method cards */}
+          {/* ── Payment method cards with branded badges ── */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            marginBottom: '8px'
+          }}>
+            {paymentMethods.slice(0, 3).map((m) => {
+              const isActive = paymentMethod === m.value;
+              return (
+                <button
+                  type="button"
+                  key={m.value}
+                  onClick={() => handleMethodChange(m.value)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '14px 8px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    backgroundColor: isActive ? 'rgba(201,168,76,0.12)' : 'rgba(0,0,0,0.2)',
+                    border: `1px solid ${isActive ? '#C9A84C' : 'rgba(201,168,76,0.1)'}`,
+                    transition: 'all 0.2s ease',
+                    fontFamily: "'Jost', sans-serif",
+                  }}
+                >
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    letterSpacing: '0.05em',
+                    background: m.badgeBg,
+                    color: m.badgeColor,
+                    boxShadow: isActive ? '0 0 0 2px #C9A84C' : 'none',
+                    transition: 'box-shadow 0.2s ease',
+                  }}>
+                    {m.badgeText}
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: isActive ? '#E8C87A' : '#8A99B8' }}>
+                    {m.label}
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#8A99B8', opacity: 0.75 }}>
+                    {m.sub}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '8px',
             marginBottom: '20px'
           }}>
-            {paymentMethods.map((m) => (
-              <button
-                type="button"
-                key={m.value}
-                onClick={() => handleMethodChange(m.value)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '12px 8px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  backgroundColor: paymentMethod === m.value ? 'rgba(201,168,76,0.12)' : 'rgba(0,0,0,0.2)',
-                  border: `1px solid ${paymentMethod === m.value ? '#C9A84C' : 'rgba(201,168,76,0.1)'}`,
-                  color: paymentMethod === m.value ? '#E8C87A' : '#8A99B8',
-                  transition: 'all 0.2s ease',
-                  fontFamily: "'Jost', sans-serif",
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>{m.icon}</span>
-                <span style={{ fontSize: '11px', fontWeight: '600', textAlign: 'center' }}>{m.label}</span>
-                <span style={{ fontSize: '10px', opacity: 0.75, textAlign: 'center' }}>{m.sub}</span>
-              </button>
-            ))}
+            {paymentMethods.slice(3).map((m) => {
+              const isActive = paymentMethod === m.value;
+              return (
+                <button
+                  type="button"
+                  key={m.value}
+                  onClick={() => handleMethodChange(m.value)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '14px 8px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    backgroundColor: isActive ? 'rgba(201,168,76,0.12)' : 'rgba(0,0,0,0.2)',
+                    border: `1px solid ${isActive ? '#C9A84C' : 'rgba(201,168,76,0.1)'}`,
+                    transition: 'all 0.2s ease',
+                    fontFamily: "'Jost', sans-serif",
+                  }}
+                >
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    letterSpacing: '0.05em',
+                    background: isActive ? '#C9A84C' : 'rgba(201,168,76,0.15)',
+                    color: isActive ? '#0A0F1E' : '#C9A84C',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    {m.badgeText}
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: isActive ? '#E8C87A' : '#8A99B8' }}>
+                    {m.label}
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#8A99B8', opacity: 0.75 }}>
+                    {m.sub}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Phone number input for mobile money */}
           {isMobileMoney && (
             <div style={{ marginBottom: '20px' }}>
               <label style={{
@@ -217,7 +277,6 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
             </div>
           )}
 
-          {/* Card / Bank info note */}
           {(paymentMethod === 'card' || paymentMethod === 'bank') && (
             <p style={{
               fontSize: '12px',
@@ -289,7 +348,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
     );
   }
 
-  // ── Step: Review (default) ─────────────────────────────────────────
+  // ── Step: Review ───────────────────────────────────────────────────
   return (
     <div style={styles.overlay}>
       <div style={styles.modalCard}>
@@ -326,11 +385,7 @@ export default function PaymentModal({ property, buyerId, onClose, onSuccess }) 
 
         {error && <div style={styles.errorBox}>⚠️ {error}</div>}
 
-        <button
-          type="button"
-          onClick={() => setStep('payment')}
-          style={styles.payBtn}
-        >
+        <button type="button" onClick={() => setStep('payment')} style={styles.payBtn}>
           Continue to Payment →
         </button>
       </div>
