@@ -1,12 +1,12 @@
-const crypto = require('crypto');
-const { createClient } = require('@supabase/supabase-js'); // FIXED: was '@supabase/supabase-client', which doesn't exist
+import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
     process.env.VITE_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const MAX_REASONABLE_AMOUNT = 5_000_000_000; // 5 billion TZS sanity ceiling — adjust to your market
+const MAX_REASONABLE_AMOUNT = 5_000_000_000;
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -20,7 +20,6 @@ export default async function handler(req, res) {
     try {
         const { propertyId, amount, paymentMethod, phoneNumber } = req.body;
 
-        // 1. Core Structural Validation Check
         if (!propertyId || !amount || !paymentMethod) {
             return res.status(400).json({
                 status: "error",
@@ -44,10 +43,6 @@ export default async function handler(req, res) {
             });
         }
 
-        // 2. SERVER-SIDE PRICE VALIDATION — this is the fix for the core vulnerability.
-        // Never trust the amount from the client. Look up the real price and compare.
-        // NOTE: confirm 'price' is the actual column name in your properties table —
-        // swap below if it's actually 'listing_price' or something else.
         const { data: property, error: propertyError } = await supabase
             .from('properties')
             .select('id, price, title')
@@ -63,34 +58,28 @@ export default async function handler(req, res) {
 
         const listedPrice = parseFloat(property.price);
 
-        // Allow a tiny tolerance for float rounding, but otherwise the offer must match the listing.
-        const tolerance = 1; // 1 TZS tolerance for rounding
-        if (Math.abs(clientAmount - listedPrice) > tolerance) {
+        if (Math.abs(clientAmount - listedPrice) > 1) {
             return res.status(400).json({
                 status: "error",
-                message: `Submitted amount does not match the listed price for this property.`
+                message: "Submitted amount does not match the listed price for this property."
             });
         }
 
         if (listedPrice > MAX_REASONABLE_AMOUNT) {
-            // Sanity ceiling — catches data errors or absurd listings before they hit a payment flow.
-            console.warn(`[Terra Link Core] Property ${propertyId} has a price exceeding sanity ceiling: ${listedPrice}`);
+            console.warn(`[Terra Link Core] Property ${propertyId} price exceeds sanity ceiling: ${listedPrice}`);
             return res.status(400).json({
                 status: "error",
                 message: "This listing's price requires manual review before payment can proceed."
             });
         }
 
-        // 3. Generate a clean, unique transaction reference tracking token
         const transactionRef = `TL-${propertyId}-${crypto.randomBytes(4).toString('hex')}`.toUpperCase();
 
-        // Use the verified listedPrice from here on, NOT clientAmount.
         const totalAmount = listedPrice;
         const commissionRate = 0.02;
         const commissionAmount = totalAmount * commissionRate;
         const netToSeller = totalAmount - commissionAmount;
 
-        // 4. Mobile money requires a phone number
         if (['mpesa', 'airtel', 'tigo'].includes(paymentMethod) && !phoneNumber) {
             return res.status(400).json({
                 status: "error",
@@ -98,13 +87,8 @@ export default async function handler(req, res) {
             });
         }
 
-        // NOTE: No real payment provider is connected yet (no Selcom/M-Pesa/Airtel/card
-        // integration exists). This logs the attempt and records a PENDING transaction only.
-        // Status will stay 'pending' until a real provider integration confirms it —
-        // do NOT treat 'pending' as paid anywhere in the frontend.
         console.log(`[Terra Link Core] Payment attempt logged — method: ${paymentMethod}, property: ${propertyId}, amount: ${totalAmount} TZS (pending, no provider connected yet)`);
 
-        // 5. Log the transaction in Supabase as PENDING
         const { error: dbError } = await supabase
             .from('payments')
             .insert([
@@ -113,7 +97,7 @@ export default async function handler(req, res) {
                     amount: totalAmount,
                     payment_method: paymentMethod,
                     phone_number: phoneNumber || null,
-                    status: 'pending', // stays pending until a real provider confirms payment
+                    status: 'pending',
                     transaction_reference: transactionRef
                 }
             ]);
@@ -126,7 +110,6 @@ export default async function handler(req, res) {
             });
         }
 
-        // 6. Return PENDING status — not success. There is no real payment yet.
         return res.status(200).json({
             status: "pending",
             message: "Transaction recorded. Payment provider integration is not yet connected — no funds have moved.",
