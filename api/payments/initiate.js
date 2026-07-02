@@ -1,3 +1,12 @@
+export default async function handler(req, res) {
+  // Temporary debug — remove after fixing
+  if (!process.env.SUPABASE_URL) {
+    return res.status(500).json({ status: 'error', message: 'SUPABASE_URL is not set' });
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ status: 'error', message: 'SUPABASE_SERVICE_ROLE_KEY is not set' });
+  }
+  // ... rest of your code
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
