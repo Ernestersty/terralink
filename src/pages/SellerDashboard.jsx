@@ -421,6 +421,135 @@ export default function SellerDashboard() {
         }
         .btn-save-location:disabled { opacity: 0.4; cursor: not-allowed; background: #374151; }
         .btn-save-location.saved { background: linear-gradient(135deg, #059669, #047857); }
+        
+        /* ── Upgraded Overview Additions ── */
+        .welcome-banner {
+          background: linear-gradient(135deg, #162038 0%, #0F172A 100%);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 26px 30px;
+          margin-bottom: 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          position: relative;
+          overflow: hidden;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .welcome-banner::after {
+          content: '🏙️';
+          position: absolute;
+          right: 28px;
+          bottom: -8px;
+          font-size: 72px;
+          opacity: 0.14;
+          pointer-events: none;
+        }
+        .ov-stat-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+        .ov-stat-card {
+          background: linear-gradient(145deg, #131C30, #192340);
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .ov-stat-top {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 16px;
+        }
+        .ov-icon-box {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          flex-shrink: 0;
+        }
+        .ov-stat-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          font-size: 11px;
+          color: var(--muted);
+        }
+        .ov-trend-pill {
+          background: rgba(16, 185, 129, 0.14);
+          color: #10b981;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 11px;
+        }
+        .ov-two-col {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+        .ov-panel {
+          background: linear-gradient(145deg, #131C30, #192340);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 22px;
+          display: flex;
+          flex-direction: column;
+        }
+        .ov-panel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 18px;
+        }
+        .ov-panel-title {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #F5E8C0;
+          font-family: 'Jost', sans-serif;
+        }
+        .quick-action-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: rgba(10, 15, 30, 0.55);
+          border: 1px solid rgba(201, 168, 76, 0.14);
+          border-radius: 12px;
+          padding: 14px 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          width: 100%;
+          margin-bottom: 10px;
+          font-family: 'Jost', sans-serif;
+        }
+        .quick-action-item:last-child { margin-bottom: 0; }
+        .quick-action-item:hover {
+          border-color: var(--gold);
+          background: rgba(201,168,76,0.08);
+          transform: translateX(3px);
+        }
+        .pro-tip-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 16px;
+        }
+        .pro-tip-item:last-child { margin-bottom: 0; }
+
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}} />
@@ -462,31 +591,237 @@ export default function SellerDashboard() {
 
           <div className="seller-content">
 
-            {/* ── Overview ── */}
-            {activeTab === 'dashboard' && (
-              <div>
-                <div className="stat-grid">
-                  <div className="stat-card"><div className="stat-label">Total Earnings</div><div className="stat-value">TZS {totalEarnings.toLocaleString()}</div></div>
-                  <div className="stat-card"><div className="stat-label">Active Listings</div><div className="stat-value">{properties.length}</div></div>
-                  <div className="stat-card"><div className="stat-label">Pending Payments</div><div className="stat-value" style={{ color: 'var(--gold)' }}>{pendingPayments}</div></div>
-                  <div className="stat-card"><div className="stat-label">Total Transactions</div><div className="stat-value">{transactions.length}</div></div>
-                </div>
-                <h2 className="section-title" style={{ fontSize: '20px' }}>Recent Activity</h2>
-                {transactions.slice(0, 3).map(txn => (
-                  <div key={txn.id} className="payout-method-card">
+            {/* ── Overview (Upgraded) ── */}
+            {activeTab === 'dashboard' && (() => {
+              const now = new Date();
+              const chartBuckets = [28, 21, 14, 7, 0].map(daysAgo => {
+                const target = new Date(now);
+                target.setDate(now.getDate() - daysAgo);
+                const label = target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const bucketSum = transactions
+                  .filter(t => {
+                    if (t.status !== 'completed') return false;
+                    const diffDays = (now - new Date(t.created_at)) / (1000 * 60 * 60 * 24);
+                    return diffDays >= daysAgo && diffDays < daysAgo + 7;
+                  })
+                  .reduce((sum, t) => sum + Number(t.amount_total) * 0.98, 0);
+                return { label, value: bucketSum };
+              });
+              const maxChartVal = Math.max(...chartBuckets.map(b => b.value), 100);
+
+              return (
+                <div>
+                  {/* Welcome Banner */}
+                  <div className="welcome-banner">
                     <div>
-                      <div style={{ fontWeight: '600', color: 'var(--gold-light)', marginBottom: '4px' }}>Ref: {txn.payment_reference}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{new Date(txn.created_at).toLocaleDateString()}</div>
+                      <h2 style={{ margin: '0 0 6px 0', fontSize: '24px', fontFamily: "'Cormorant Garamond', serif", color: '#F5E8C0' }}>
+                        Welcome back, Seller! 👋
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)' }}>
+                        Here's what's happening with your listings today.
+                      </p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: '600', color: 'var(--gold-light)' }}>TZS {Number(txn.amount_total * 0.98).toLocaleString()}</div>
-                      <div style={{ fontSize: '12px', color: txn.status === 'completed' ? '#10b981' : '#f59e0b', fontWeight: '600', textTransform: 'capitalize' }}>{txn.status}</div>
+                    <span style={{
+                      background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)',
+                      color: 'var(--gold-light)', padding: '6px 14px', borderRadius: '20px',
+                      fontSize: '11px', fontWeight: '600', letterSpacing: '0.06em', textTransform: 'uppercase'
+                    }}>
+                      ★ Premium Seller
+                    </span>
+                  </div>
+
+                  {/* Top Stat Cards */}
+                  <div className="ov-stat-grid">
+                    <div className="ov-stat-card">
+                      <div className="ov-stat-top">
+                        <div className="ov-icon-box" style={{ background: 'rgba(201,168,76,0.15)', color: '#E8C87A' }}>💰</div>
+                        <div>
+                          <div className="stat-label" style={{ marginBottom: '4px' }}>Total Earnings</div>
+                          <div className="stat-value" style={{ fontSize: '24px' }}>TZS {totalEarnings.toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="ov-stat-footer">
+                        <span>All time earnings<br /><small style={{ opacity: 0.7 }}>vs last 30 days</small></span>
+                        <span className="ov-trend-pill">↑ 0%</span>
+                      </div>
+                    </div>
+
+                    <div className="ov-stat-card">
+                      <div className="ov-stat-top">
+                        <div className="ov-icon-box" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>📋</div>
+                        <div>
+                          <div className="stat-label" style={{ marginBottom: '4px' }}>Active Listings</div>
+                          <div className="stat-value" style={{ fontSize: '24px', color: '#E8DFC8' }}>{properties.length}</div>
+                        </div>
+                      </div>
+                      <div className="ov-stat-footer">
+                        <span>Currently live<br /><small style={{ opacity: 0.7 }}>vs last 30 days</small></span>
+                        <span className="ov-trend-pill">↑ 0%</span>
+                      </div>
+                    </div>
+
+                    <div className="ov-stat-card">
+                      <div className="ov-stat-top">
+                        <div className="ov-icon-box" style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>💳</div>
+                        <div>
+                          <div className="stat-label" style={{ marginBottom: '4px' }}>Pending Payments</div>
+                          <div className="stat-value" style={{ fontSize: '24px', color: '#E8DFC8' }}>{pendingPayments}</div>
+                        </div>
+                      </div>
+                      <div className="ov-stat-footer">
+                        <span>Awaiting payout<br /><small style={{ opacity: 0.7 }}>vs last 30 days</small></span>
+                        <span className="ov-trend-pill">↑ 0%</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-                {transactions.length === 0 && <p style={{ color: 'var(--muted)' }}>No transactions yet.</p>}
-              </div>
-            )}
+
+                  {/* Middle Row: Earnings Chart + Recent Activity */}
+                  <div className="ov-two-col">
+                    <div className="ov-panel">
+                      <div className="ov-panel-header">
+                        <h3 className="ov-panel-title">Earnings Overview</h3>
+                        <span style={{
+                          fontSize: '11px', color: 'var(--muted)', background: 'rgba(0,0,0,0.25)',
+                          border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '8px'
+                        }}>
+                          Last 30 Days
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '170px', paddingTop: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '130px', borderBottom: '1px solid rgba(201,168,76,0.25)', padding: '0 10px' }}>
+                          {chartBuckets.map((b, i) => {
+                            const heightPct = b.value > 0 ? Math.max((b.value / maxChartVal) * 100, 8) : 3;
+                            return (
+                              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 1 }}>
+                                <div title={`TZS ${b.value.toLocaleString()}`} style={{
+                                  width: '18px',
+                                  height: `${heightPct}%`,
+                                  background: b.value > 0 ? 'linear-gradient(180deg, #E8C87A, #C9A84C)' : 'rgba(201,168,76,0.35)',
+                                  borderRadius: '4px 4px 0 0',
+                                  transition: 'height 0.4s ease'
+                                }} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px 0', fontSize: '10px', color: 'var(--muted)' }}>
+                          {chartBuckets.map((b, i) => <span key={i}>{b.label}</span>)}
+                        </div>
+                        <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'var(--gold-light)' }}>
+                          ● Earnings (TZS)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="ov-panel">
+                      <div className="ov-panel-header">
+                        <h3 className="ov-panel-title">Recent Activity</h3>
+                        <button type="button" className="btn-ghost" onClick={() => setActiveTab('transactions')} style={{ padding: '4px 10px', fontSize: '11px' }}>
+                          View All
+                        </button>
+                      </div>
+
+                      {transactions.length === 0 ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px 12px' }}>
+                          <div style={{ fontSize: '36px', marginBottom: '10px', opacity: 0.65 }}>🔍</div>
+                          <div style={{ fontWeight: '600', color: '#E8DFC8', fontSize: '14px', marginBottom: '4px' }}>No recent activity</div>
+                          <div style={{ fontSize: '12px', color: 'var(--muted)', maxWidth: '220px' }}>
+                            Your recent transactions and updates will appear here.
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {transactions.slice(0, 3).map(txn => (
+                            <div key={txn.id} className="payout-method-card" style={{ marginBottom: 0, padding: '14px 16px' }}>
+                              <div>
+                                <div style={{ fontWeight: '600', color: 'var(--gold-light)', fontSize: '13px', marginBottom: '2px' }}>Ref: {txn.payment_reference}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{new Date(txn.created_at).toLocaleDateString()}</div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontWeight: '600', color: 'var(--gold-light)', fontSize: '13px' }}>TZS {Number(txn.amount_total * 0.98).toLocaleString()}</div>
+                                <div style={{ fontSize: '11px', color: txn.status === 'completed' ? '#10b981' : '#f59e0b', fontWeight: '600', textTransform: 'capitalize' }}>{txn.status}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Quick Actions + Pro Tips */}
+                  <div className="ov-two-col" style={{ marginBottom: 0 }}>
+                    <div className="ov-panel">
+                      <div className="ov-panel-header">
+                        <h3 className="ov-panel-title">Quick Actions</h3>
+                      </div>
+
+                      <button type="button" className="quick-action-item" onClick={() => { setActiveTab('properties'); setShowCreateProperty(true); }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="ov-icon-box" style={{ background: 'rgba(201,168,76,0.15)', color: '#E8C87A', width: '38px', height: '38px', fontSize: '16px' }}>🏠</div>
+                          <div>
+                            <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px' }}>Add New Property</div>
+                            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>List a new property for sale or rent</div>
+                          </div>
+                        </div>
+                        <span style={{ color: 'var(--gold)', fontSize: '16px' }}>›</span>
+                      </button>
+
+                      <button type="button" className="quick-action-item" onClick={() => setActiveTab('properties')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="ov-icon-box" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', width: '38px', height: '38px', fontSize: '16px' }}>🗂️</div>
+                          <div>
+                            <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px' }}>Manage Listings</div>
+                            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Edit or update your existing listings</div>
+                          </div>
+                        </div>
+                        <span style={{ color: 'var(--gold)', fontSize: '16px' }}>›</span>
+                      </button>
+
+                      <button type="button" className="quick-action-item" onClick={() => setActiveTab('transactions')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="ov-icon-box" style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', width: '38px', height: '38px', fontSize: '16px' }}>🧾</div>
+                          <div>
+                            <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px' }}>View Transactions</div>
+                            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Track your transactions and history</div>
+                          </div>
+                        </div>
+                        <span style={{ color: 'var(--gold)', fontSize: '16px' }}>›</span>
+                      </button>
+                    </div>
+
+                    <div className="ov-panel">
+                      <div className="ov-panel-header">
+                        <h3 className="ov-panel-title">Pro Tips</h3>
+                      </div>
+
+                      <div className="pro-tip-item">
+                        <div className="ov-icon-box" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', width: '36px', height: '36px', fontSize: '16px' }}>🛡️</div>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px', marginBottom: '2px' }}>Complete Your Payout Setup</div>
+                          <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: '1.4' }}>Adding a verified M-Pesa or bank account ensures instant property sale disbursements.</div>
+                        </div>
+                      </div>
+
+                      <div className="pro-tip-item">
+                        <div className="ov-icon-box" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', width: '36px', height: '36px', fontSize: '16px' }}>📸</div>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px', marginBottom: '2px' }}>High Quality Photos</div>
+                          <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: '1.4' }}>Use clear, bright photos and accurate map pins to attract serious buyers faster.</div>
+                        </div>
+                      </div>
+
+                      <div className="pro-tip-item">
+                        <div className="ov-icon-box" style={{ background: 'rgba(201,168,76,0.15)', color: '#E8C87A', width: '36px', height: '36px', fontSize: '16px' }}>📈</div>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#F5E8C0', fontSize: '13px', marginBottom: '2px' }}>Stay Active</div>
+                          <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: '1.4' }}>Regularly update your property descriptions and pricing to get more visibility.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── Properties ── */}
             {activeTab === 'properties' && (
